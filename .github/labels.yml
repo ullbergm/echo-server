@@ -73,10 +73,6 @@
   color: "ff6600"
   description: "Extra large PR (500-999 lines)"
 
-- name: "size/XXL"
-  color: "ff0000"
-  description: "Huge PR (1000+ lines)"
-
 # Priority labels
 - name: "priority/critical"
   color: "b60205"
