@@ -1,0 +1,77 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo-server
+  labels:
+    app: echo-server
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: echo-server
+  template:
+    metadata:
+      labels:
+        app: echo-server
+        deployment: echo-server
+      annotations:
+        description: "Echo Server - HTTP request reflection service"
+    spec:
+      containers:
+      - name: echo-server
+        image: ghcr.io/ullbergm/echo-server:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        # Kubernetes pod metadata via Downward API
+        - name: K8S_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: K8S_POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: K8S_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: K8S_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        # Pod labels
+        - name: K8S_LABEL_app
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['app']
+        - name: K8S_LABEL_deployment
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['deployment']
+        # Pod annotations
+        - name: K8S_ANNOTATION_description
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.annotations['description']
+        livenessProbe:
+          httpGet:
+            path: /healthz/live
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz/ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"

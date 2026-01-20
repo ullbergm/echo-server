@@ -1,0 +1,25 @@
+name: Clean GHCR
+
+on:
+  workflow_run:
+    workflows:
+      - "Push Docker Image"
+      - "Release"
+    types:
+      - completed
+  workflow_dispatch:
+
+jobs:
+  clean-up-ghcr:
+    name: Clean up docker images
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: 'Clean up docker images'
+        uses: dataaxiom/ghcr-cleanup-action@cd0cdb900b5dbf3a6f2cc869f0dbb0b8211f50c4 # v1
+        with:
+          delete-untagged: true
+          validate: true
+          keep-n-untagged: 0
+          token: ${{ secrets.GITHUB_TOKEN }}

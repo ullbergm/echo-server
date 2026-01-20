@@ -1,0 +1,207 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release-type:
+        description: 'Release type (major, minor, patch, or custom)'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+          - custom
+      custom-version:
+        description: >-
+          Custom version (only used if release-type is custom,
+          e.g., 2.3.0)
+        required: false
+        type: string
+
+env:
+  GO_VERSION: '1.25.6'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+permissions:
+  contents: write
+  pull-requests: read
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.release_version.outputs.version }}
+      tag: ${{ steps.create_tag.outputs.tag }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+        with:
+          fetch-depth: 0
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+
+      - name: Setup Go ${{ env.GO_VERSION }}
+        uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6
+        with:
+          go-version: '${{ env.GO_VERSION }}'
+          cache: true
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email \
+            "github-actions[bot]@users.noreply.github.com"
+
+      - name: Get current version from latest tag
+        id: current_version
+        run: |
+          # Get the highest version tag using git's version sort
+          LATEST_TAG=$(git tag --list "v*" --sort=version:refname | tail -n 1)
+
+          # Fallback if no tags exist
+          if [ -z "$LATEST_TAG" ]; then
+            LATEST_TAG="v0.0.0"
+          fi
+
+          echo "Latest tag: $LATEST_TAG"
+
+          # Remove the 'v' prefix
+          CURRENT_VERSION=${LATEST_TAG#v}
+          echo "Current released version: $CURRENT_VERSION"
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+          # Extract version parts
+          IFS='.' read -r -a VERSION_PARTS <<< "$CURRENT_VERSION"
+          MAJOR="${VERSION_PARTS[0]}"
+          MINOR="${VERSION_PARTS[1]}"
+          PATCH="${VERSION_PARTS[2]}"
+
+          echo "major=$MAJOR" >> $GITHUB_OUTPUT
+          echo "minor=$MINOR" >> $GITHUB_OUTPUT
+          echo "patch=$PATCH" >> $GITHUB_OUTPUT
+
+      - name: Calculate release version
+        id: release_version
+        run: |
+          MAJOR=${{ steps.current_version.outputs.major }}
+          MINOR=${{ steps.current_version.outputs.minor }}
+          PATCH=${{ steps.current_version.outputs.patch }}
+
+          if [ "${{ inputs.release-type }}" == "major" ]; then
+            RELEASE_VERSION="$((MAJOR + 1)).0.0"
+          elif [ "${{ inputs.release-type }}" == "minor" ]; then
+            RELEASE_VERSION="${MAJOR}.$((MINOR + 1)).0"
+          elif [ "${{ inputs.release-type }}" == "patch" ]; then
+            RELEASE_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
+          elif [ "${{ inputs.release-type }}" == "custom" ]; then
+            if [ -z "${{ inputs.custom-version }}" ]; then
+              echo "Error: Custom version required for custom type"
+              exit 1
+            fi
+            RELEASE_VERSION="${{ inputs.custom-version }}"
+          else
+            echo "Error: Invalid release type"
+            exit 1
+          fi
+
+          echo "Release version: $RELEASE_VERSION"
+          echo "version=$RELEASE_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create and push tag
+        id: create_tag
+        run: |
+          NEW_VERSION="${{ steps.release_version.outputs.version }}"
+          TAG="v${NEW_VERSION}"
+          
+          git tag "${TAG}"
+          git push origin "${TAG}"
+          
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "Created and pushed tag: ${TAG}"
+
+  build-and-push:
+    name: Build and Push Docker Image
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=raw,value=${{ needs.release.outputs.version }}
+            type=semver,pattern={{version}},value=${{ needs.release.outputs.tag }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.release.outputs.tag }}
+            type=semver,pattern={{major}},value=${{ needs.release.outputs.tag }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  create-release:
+    name: Create GitHub Release
+    needs: [release, build-and-push]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+          fetch-depth: 0
+
+      - name: Build Changelog
+        id: github_release
+        uses: mikepenz/release-changelog-builder-action@439f79b5b5428107c7688c1d2b0e8bacc9b8792c # v6
+        with:
+          configuration: ".github/workflows/changelog/configuration.json"
+          toTag: ${{ needs.release.outputs.tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Release
+        uses: ncipollo/release-action@b7eabc95ff50cbeeedec83973935c8f306dfcd0b # v1
+        with:
+          tag: ${{ needs.release.outputs.tag }}
+          body: ${{ steps.github_release.outputs.changelog }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Output release information
+        run: |
+          echo "✅ Release ${{ needs.release.outputs.version }} completed successfully!"
+          echo "📦 Tag: ${{ needs.release.outputs.tag }}"
+          echo "🐳 Docker images pushed to ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          echo "📝 GitHub Release created with changelog"

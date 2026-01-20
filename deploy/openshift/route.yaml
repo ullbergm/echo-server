@@ -1,0 +1,19 @@
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: echo-server
+  labels:
+    app: echo-server
+spec:
+  # host: echo.apps.example.com
+  
+  to:
+    kind: Service
+    name: echo-server
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect  # Redirect HTTP to HTTPS

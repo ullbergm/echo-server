@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.PageTitle}}</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%234285f4'/%3E%3Ctext x='50' y='65' font-size='50' text-anchor='middle' fill='white' font-family='Arial, sans-serif' font-weight='bold'%3EE%3C/text%3E%3C/svg%3E">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4285f4;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 5px;
+        }
+        h3 {
+            margin-top: 20px;
+            color: #555;
+        }
+        h4 {
+            margin-top: 15px;
+            color: #555;
+        }
+        .section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+            word-break: break-word;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+            width: 30%;
+        }
+        td {
+            color: #666;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            background: #4285f4;
+            color: white;
+        }
+        .tip {
+            background: #e8f4f8;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #4285f4;
+        }
+        .body-content {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #999;
+            font-size: 14px;
+            border-top: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 {{.PageTitle}}</h1>
+    <p>This page displays information about your HTTP request, the server, and Kubernetes environment (if applicable).</p>
+    <p class="tip"><strong>💡 Tip:</strong> To view this data as JSON, send a request with <code>Accept: application/json</code> header (e.g., <code>curl -H "Accept: application/json" http://localhost:8080/</code>)</p>
+
+    {{/* Request Information */}}
+    <div class="section">
+        <h2>📨 Request Information</h2>
+        <table>
+            <tr><th>Method</th><td><span class="badge">{{.Request.Method}}</span></td></tr>
+            <tr><th>Path</th><td>{{.Request.Path}}</td></tr>
+            {{if .Request.Query}}<tr><th>Query</th><td>{{.Request.Query}}</td></tr>{{end}}
+            <tr><th>Remote Address</th><td>{{.Request.RemoteAddress}}</td></tr>
+        </table>
+        <h3>Headers</h3>
+        <table>
+            {{range $key, $value := .Request.Headers}}
+            <tr><th>{{$key}}</th><td>{{$value}}</td></tr>
+            {{end}}
+        </table>
+        {{if .Request.Body}}
+        <h3>Request Body</h3>
+        <table>
+            {{if .Request.Body.ContentType}}<tr><th>Content-Type</th><td>{{.Request.Body.ContentType}}</td></tr>{{end}}
+            <tr><th>Size</th><td>{{.Request.Body.Size}} bytes</td></tr>
+            {{if .Request.Body.IsBinary}}<tr><th>Binary Data</th><td>Yes (base64 encoded)</td></tr>{{end}}
+            {{if .Request.Body.Truncated}}<tr><th>Truncated</th><td>Yes (exceeded max size limit)</td></tr>{{end}}
+        </table>
+        {{if .Request.Body.Content}}
+        <h4>Body Content</h4>
+        <pre class="body-content">{{FormatBodyContent .Request.Body.Content}}</pre>
+        {{end}}
+        {{if .Request.Cookies}}
+        <h3>Cookies</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Request.Cookies}}
+                <tr>
+                    <td style="font-weight: 600;">{{.Name}}</td>
+                    <td>{{.Value}}</td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+        <p class="tip"><strong>💡 Tip:</strong> To set a response cookie, use the <code>x-set-cookie</code> header (e.g., <code>curl -H "x-set-cookie: mycookie=myvalue; Path=/; HttpOnly" http://localhost:8080/</code>)</p>
+        {{end}}
+        {{end}}
+        {{if .Request.Compression}}
+        <h3>🗜️ Compression</h3>
+        <table>
+            <tr><th>Supported</th><td>{{if .Request.Compression.Supported}}✅ Yes{{else}}❌ No{{end}}</td></tr>
+            {{if .Request.Compression.AcceptedEncodings}}
+            <tr><th>Accepted Encodings</th><td>{{range $i, $enc := .Request.Compression.AcceptedEncodings}}{{if $i}}, {{end}}{{$enc}}{{end}}</td></tr>
+            {{end}}
+            {{if .Request.Compression.ResponseEncoding}}
+            <tr><th>Response Encoding</th><td><strong>{{.Request.Compression.ResponseEncoding}}</strong></td></tr>
+            {{end}}
+        </table>
+        {{end}}
+    </div>
+
+    {{/* Server Information */}}
+    <div class="section">
+        <h2>🖥️ Server Information</h2>
+        <table>
+            <tr><th>Hostname</th><td>{{.Server.Hostname}}</td></tr>
+            {{if .Server.HostAddress}}<tr><th>Host Address</th><td>{{.Server.HostAddress}}</td></tr>{{end}}
+        </table>
+        {{if .Server.Environment}}
+        <h3>Environment Variables</h3>
+        <table>
+            {{range $key, $value := .Server.Environment}}
+            <tr><th>{{$key}}</th><td>{{$value}}</td></tr>
+            {{end}}
+        </table>
+        {{end}}
+    </div>
+
+    {{/* Kubernetes Information */}}
+    {{if .Kubernetes}}
+    <div class="section">
+        <h2>☸️ Kubernetes Information</h2>
+        <table>
+            <tr><th>Pod Name</th><td>{{.Kubernetes.PodName}}</td></tr>
+            <tr><th>Namespace</th><td>{{.Kubernetes.Namespace}}</td></tr>
+            {{if .Kubernetes.PodIP}}<tr><th>Pod IP</th><td>{{.Kubernetes.PodIP}}</td></tr>{{end}}
+            {{if .Kubernetes.NodeName}}<tr><th>Node Name</th><td>{{.Kubernetes.NodeName}}</td></tr>{{end}}
+            {{if .Kubernetes.ServiceHost}}<tr><th>Service Host</th><td>{{.Kubernetes.ServiceHost}}</td></tr>{{end}}
+            {{if .Kubernetes.ServicePort}}<tr><th>Service Port</th><td>{{.Kubernetes.ServicePort}}</td></tr>{{end}}
+        </table>
+
+        {{if .Kubernetes.Labels}}
+        <h3>Pod Labels</h3>
+        <table>
+            {{range $key, $value := .Kubernetes.Labels}}
+            <tr><th>{{$key}}</th><td>{{$value}}</td></tr>
+            {{end}}
+        </table>
+        {{end}}
+
+        {{if .Kubernetes.Annotations}}
+        <h3>Pod Annotations</h3>
+        <table>
+            {{range $key, $value := .Kubernetes.Annotations}}
+            <tr><th>{{$key}}</th><td>{{$value}}</td></tr>
+            {{end}}
+        </table>
+        {{end}}
+    </div>
+    {{end}}
+
+    {{/* JWT Token Information */}}
+    {{if .JwtTokens}}
+    <div class="section">
+        <h2>🔐 JWT Token Information</h2>
+        <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Decoded JWT tokens found in request headers (signature not validated).</p>
+
+        {{range $headerName, $jwtInfo := .JwtTokens}}
+        <h3 style="color: #4285f4;">{{$headerName}} Header</h3>
+        {{if $jwtInfo.RawToken}}
+        <table>
+            <tr><th>Token (truncated)</th><td style="font-family: monospace; font-size: 12px;">{{$jwtInfo.RawToken}}</td></tr>
+        </table>
+        {{end}}
+        {{if $jwtInfo.Header}}
+        <h4>JWT Header</h4>
+        <table>
+            {{range $key, $value := $jwtInfo.Header}}
+            <tr><th>{{$key}}</th><td>{{$value}}</td></tr>
+            {{end}}
+        </table>
+        {{end}}
+        {{if $jwtInfo.Payload}}
+        <h4>JWT Payload</h4>
+        <table>
+            {{range $key, $value := $jwtInfo.Payload}}
+            <tr><th>{{$key}}</th><td>{{FormatJWTValue $key $value}}</td></tr>
+            {{end}}
+        </table>
+        {{end}}
+        {{end}}
+    </div>
+    {{end}}
+
+    <div class="footer">
+        <p>Echo Server {{.Version}} (Golang/Fiber)</p>
+    </div>
+</body>
+</html>

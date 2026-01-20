@@ -1,0 +1,25 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: echo-server
+  labels:
+    app: echo-server
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: echo.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: echo-server
+            port:
+              number: 8080
+  # Uncomment for TLS/HTTPS:
+  # tls:
+  # - hosts:
+  #   - echo.example.com
+  #   secretName: echo-server-tls
