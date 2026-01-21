@@ -176,6 +176,9 @@ func main() {
 	// Prometheus metrics endpoint
 	app.Get("/metrics", handlers.MetricsHandler)
 
+	// Request builder UI endpoint
+	app.Get("/builder", handlers.BuilderHandler())
+
 	// Echo handlers for all HTTP methods (wildcard path)
 	app.Get("/*", handlers.EchoHandler(jwtService, bodyService))
 	app.Post("/*", handlers.EchoHandler(jwtService, bodyService))

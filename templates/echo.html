@@ -90,12 +90,36 @@
             font-size: 14px;
             border-top: 1px solid #ddd;
         }
+        .header-links {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 20px;
+        }
+        .header-link {
+            color: #4285f4;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            background: white;
+            border: 1px solid #ddd;
+            transition: all 0.2s;
+        }
+        .header-link:hover {
+            background: #f8f9fa;
+            border-color: #4285f4;
+        }
     </style>
 </head>
 <body>
     <h1>🔍 {{.PageTitle}}</h1>
     <p>This page displays information about your HTTP request, the server, and Kubernetes environment (if applicable).</p>
     <p class="tip"><strong>💡 Tip:</strong> To view this data as JSON, send a request with <code>Accept: application/json</code> header (e.g., <code>curl -H "Accept: application/json" http://localhost:8080/</code>)</p>
+    
+    <div class="header-links">
+        <a href="/builder" class="header-link">🚀 Request Builder</a>
+        <a href="/monitor" class="header-link">📈 Monitor</a>
+        <a href="/metrics" class="header-link">📊 Metrics</a>
+    </div>
 
     {{/* Request Information */}}
     <div class="section">
