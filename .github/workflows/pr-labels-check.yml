@@ -66,17 +66,32 @@ jobs:
               errors.push(`   Please add a label starting with \`area/\` (e.g., area/handlers, area/models, area/services)`);
             }
             
-            // Get existing bot comment
+            // Get existing bot comments
             const comments = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
             });
             
-            const botComment = comments.data.find(comment => 
+            const botComments = comments.data.filter(comment => 
               comment.user.type === 'Bot' && 
               comment.body.includes('PR Label Validation')
             );
+            
+            // Remove duplicate bot comments (keep only the first one)
+            if (botComments.length > 1) {
+              core.info(`Found ${botComments.length} bot comments, removing duplicates...`);
+              for (let i = 1; i < botComments.length; i++) {
+                await github.rest.issues.deleteComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: botComments[i].id,
+                });
+                core.info(`Deleted duplicate comment ${botComments[i].id}`);
+              }
+            }
+            
+            const botComment = botComments[0]; // Use the first (oldest) comment
             
             // If there are errors, fail the check and add/update comment
             if (errors.length > 0) {
