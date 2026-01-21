@@ -18,7 +18,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/monitor"
 	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/gofiber/template/html/v2"
+	"github.com/gofiber/template/html/v3"
 	"github.com/ullbergm/echo-server/handlers"
 	"github.com/ullbergm/echo-server/services"
 )
