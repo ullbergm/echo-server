@@ -53,7 +53,7 @@ jobs:
               'area/services',
               'area/templates',
               'area/docker',
-              'area/kubernetes'
+              'area/kubernetes',
               'area/github'
             ];
             
