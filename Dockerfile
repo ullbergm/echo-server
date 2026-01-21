@@ -43,8 +43,9 @@ COPY --from=build --chown=app:app /app/public ./public
 # Use non-root user
 USER app
 
-# Expose port
+# Expose ports
 EXPOSE 8080
+EXPOSE 8443
 
 # Run the application
 ENTRYPOINT ["./echo-server"]

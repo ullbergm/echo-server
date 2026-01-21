@@ -157,6 +157,16 @@
             {{end}}
         </table>
         {{end}}
+        {{if .Request.TLS}}
+        <h3>🔒 TLS Connection</h3>
+        <table>
+            <tr><th>Secure Connection</th><td>{{if .Request.TLS.Enabled}}✅ Yes (HTTPS){{else}}❌ No (HTTP){{end}}</td></tr>
+            {{if .Request.TLS.Enabled}}
+            {{if .Request.TLS.Version}}<tr><th>TLS Version</th><td>{{.Request.TLS.Version}}</td></tr>{{end}}
+            {{if .Request.TLS.Cipher}}<tr><th>Cipher Suite</th><td>{{.Request.TLS.Cipher}}</td></tr>{{end}}
+            {{end}}
+        </table>
+        {{end}}
     </div>
 
     {{/* Server Information */}}
@@ -171,6 +181,21 @@
         <table>
             {{range $key, $value := .Server.Environment}}
             <tr><th>{{$key}}</th><td>{{$value}}</td></tr>
+            {{end}}
+        </table>
+        {{end}}
+        {{if .Server.TLS}}
+        <h3>🔒 TLS/SSL Configuration</h3>
+        <table>
+            <tr><th>TLS Enabled</th><td>{{if .Server.TLS.Enabled}}✅ Yes{{else}}❌ No{{end}}</td></tr>
+            {{if .Server.TLS.Enabled}}
+            {{if .Server.TLS.Version}}<tr><th>TLS Version</th><td>{{.Server.TLS.Version}}</td></tr>{{end}}
+            {{if .Server.TLS.Subject}}<tr><th>Certificate Subject</th><td>{{.Server.TLS.Subject}}</td></tr>{{end}}
+            {{if .Server.TLS.Issuer}}<tr><th>Certificate Issuer</th><td>{{.Server.TLS.Issuer}}</td></tr>{{end}}
+            {{if .Server.TLS.NotBefore}}<tr><th>Valid From</th><td>{{.Server.TLS.NotBefore}}</td></tr>{{end}}
+            {{if .Server.TLS.NotAfter}}<tr><th>Valid Until</th><td>{{.Server.TLS.NotAfter}}</td></tr>{{end}}
+            {{if .Server.TLS.SerialNumber}}<tr><th>Serial Number</th><td style="font-family: monospace; font-size: 12px;">{{.Server.TLS.SerialNumber}}</td></tr>{{end}}
+            {{if .Server.TLS.DNSNames}}<tr><th>DNS Names</th><td>{{range $i, $name := .Server.TLS.DNSNames}}{{if $i}}, {{end}}{{$name}}{{end}}</td></tr>{{end}}
             {{end}}
         </table>
         {{end}}

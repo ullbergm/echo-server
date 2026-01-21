@@ -37,7 +37,7 @@ func TestMetricsMiddleware(t *testing.T) {
 				Name: "test_requests_total",
 				Help: "Test counter",
 			},
-			[]string{"method", "uri"},
+			[]string{"method", "uri", "protocol"},
 		),
 		requestLatency: prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
@@ -45,7 +45,7 @@ func TestMetricsMiddleware(t *testing.T) {
 				Help:    "Test histogram",
 				Buckets: prometheus.DefBuckets,
 			},
-			[]string{"method", "uri"},
+			[]string{"method", "uri", "protocol"},
 		),
 	}
 
@@ -107,7 +107,7 @@ func TestMetricsMiddlewareError(t *testing.T) {
 				Name: "test_error_requests_total",
 				Help: "Test counter",
 			},
-			[]string{"method", "uri"},
+			[]string{"method", "uri", "protocol"},
 		),
 		requestLatency: prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
@@ -115,7 +115,7 @@ func TestMetricsMiddlewareError(t *testing.T) {
 				Help:    "Test histogram",
 				Buckets: prometheus.DefBuckets,
 			},
-			[]string{"method", "uri"},
+			[]string{"method", "uri", "protocol"},
 		),
 	}
 
@@ -149,7 +149,7 @@ func TestMetricsServiceConcurrency(t *testing.T) {
 				Name: "test_concurrent_requests_total",
 				Help: "Test counter",
 			},
-			[]string{"method", "uri"},
+			[]string{"method", "uri", "protocol"},
 		),
 		requestLatency: prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
@@ -157,7 +157,7 @@ func TestMetricsServiceConcurrency(t *testing.T) {
 				Help:    "Test histogram",
 				Buckets: prometheus.DefBuckets,
 			},
-			[]string{"method", "uri"},
+			[]string{"method", "uri", "protocol"},
 		),
 	}
 

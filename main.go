@@ -1,10 +1,13 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
 	"os"
 	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/goccy/go-json"
@@ -188,10 +191,23 @@ func main() {
 		port = "8080"
 	}
 
-	// Start server
-	log.Printf("Echo Server starting on port %s", port)
-	if err := app.Listen(":" + port); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+	// Check if TLS is enabled
+	tlsEnabled := false
+	if tlsEnv := os.Getenv("TLS_ENABLED"); tlsEnv != "" {
+		if parsed, err := strconv.ParseBool(tlsEnv); err == nil {
+			tlsEnabled = parsed
+		}
+	}
+
+	if tlsEnabled {
+		// TLS is enabled, start both HTTP and HTTPS servers
+		startDualStackServers(app, port)
+	} else {
+		// TLS is disabled, start only HTTP server
+		log.Printf("Echo Server starting on port %s (HTTP only)", port)
+		if err := app.Listen(":" + port); err != nil {
+			log.Fatalf("Failed to start server: %v", err)
+		}
 	}
 }
 
@@ -209,5 +225,110 @@ func formatValue(v interface{}) string {
 		return strconv.FormatBool(val)
 	default:
 		return fmt.Sprintf("%v", val)
+	}
+}
+
+// startDualStackServers starts both HTTP and HTTPS servers
+func startDualStackServers(app *fiber.App, httpPort string) {
+	// Get TLS configuration
+	tlsPort := os.Getenv("TLS_PORT")
+	if tlsPort == "" {
+		tlsPort = "8443"
+	}
+
+	certFile := os.Getenv("TLS_CERT_FILE")
+	if certFile == "" {
+		certFile = "/certs/tls.crt"
+	}
+
+	keyFile := os.Getenv("TLS_KEY_FILE")
+	if keyFile == "" {
+		keyFile = "/certs/tls.key"
+	}
+
+	// Initialize TLS service
+	tlsService := services.NewTLSService()
+
+	// Load or generate certificate
+	cert, err := tlsService.GetOrGenerateCertificate(certFile, keyFile)
+	if err != nil {
+		log.Fatalf("Failed to get TLS certificate: %v", err)
+	}
+
+	// Store certificate information in environment for handlers to access
+	storeCertificateInfo(cert)
+
+	// Create TLS config
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		MinVersion:   tls.VersionTLS12,
+	}
+
+	// Use WaitGroup to manage both servers
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	// Start HTTP server in goroutine
+	go func() {
+		defer wg.Done()
+		log.Printf("Echo Server starting HTTP server on port %s", httpPort)
+		if err := app.Listen(":" + httpPort); err != nil {
+			log.Printf("HTTP server error: %v", err)
+		}
+	}()
+
+	// Start HTTPS server in goroutine
+	go func() {
+		defer wg.Done()
+		log.Printf("Echo Server starting HTTPS server on port %s", tlsPort)
+
+		// Use ListenTLSWithCertificate for custom TLS config
+		ln, err := tls.Listen("tcp", ":"+tlsPort, tlsConfig)
+		if err != nil {
+			log.Printf("Failed to create TLS listener: %v", err)
+			return
+		}
+
+		if err := app.Listener(ln); err != nil {
+			log.Printf("HTTPS server error: %v", err)
+		}
+	}()
+
+	log.Printf("Dual-stack servers running - HTTP:%s HTTPS:%s", httpPort, tlsPort)
+	wg.Wait()
+}
+
+// storeCertificateInfo stores certificate information in environment variables
+// so handlers can access it. This follows the existing pattern in the codebase
+// of using environment variables for configuration and metadata (see K8S_* vars).
+// Environment variables are used here for simplicity and consistency with the
+// existing architecture, where handlers access server metadata via os.Getenv().
+func storeCertificateInfo(cert tls.Certificate) {
+	x509Cert, err := services.ParseCertificate(cert)
+	if err != nil {
+		log.Printf("Warning: Failed to parse certificate: %v", err)
+		return
+	}
+
+	// Store certificate info in environment with _ prefix to indicate internal use
+	if err := os.Setenv("_TLS_CERT_SUBJECT", x509Cert.Subject.String()); err != nil {
+		log.Printf("Warning: Failed to set _TLS_CERT_SUBJECT: %v", err)
+	}
+	if err := os.Setenv("_TLS_CERT_ISSUER", x509Cert.Issuer.String()); err != nil {
+		log.Printf("Warning: Failed to set _TLS_CERT_ISSUER: %v", err)
+	}
+	if err := os.Setenv("_TLS_CERT_NOT_BEFORE", x509Cert.NotBefore.Format(time.RFC3339)); err != nil {
+		log.Printf("Warning: Failed to set _TLS_CERT_NOT_BEFORE: %v", err)
+	}
+	if err := os.Setenv("_TLS_CERT_NOT_AFTER", x509Cert.NotAfter.Format(time.RFC3339)); err != nil {
+		log.Printf("Warning: Failed to set _TLS_CERT_NOT_AFTER: %v", err)
+	}
+	if err := os.Setenv("_TLS_CERT_SERIAL", x509Cert.SerialNumber.String()); err != nil {
+		log.Printf("Warning: Failed to set _TLS_CERT_SERIAL: %v", err)
+	}
+	if len(x509Cert.DNSNames) > 0 {
+		if err := os.Setenv("_TLS_CERT_DNS_NAMES", strings.Join(x509Cert.DNSNames, ",")); err != nil {
+			log.Printf("Warning: Failed to set _TLS_CERT_DNS_NAMES: %v", err)
+		}
 	}
 }

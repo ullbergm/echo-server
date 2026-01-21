@@ -1,4 +1,7 @@
 ---
+# Edge Termination Route (default)
+# TLS is terminated at the router, traffic to the service is HTTP
+# This is the most common and recommended approach for most use cases
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
@@ -6,14 +9,77 @@ metadata:
   labels:
     app: echo-server
 spec:
-  # host: echo.apps.example.com
+  # host: echo.apps.example.com  # Uncomment to specify a custom hostname
   
   to:
     kind: Service
     name: echo-server
     weight: 100
   port:
-    targetPort: http
+    targetPort: http  # Target the HTTP port (8080)
   tls:
     termination: edge
     insecureEdgeTerminationPolicy: Redirect  # Redirect HTTP to HTTPS
+
+---
+# Passthrough Termination Route
+# TLS traffic passes through the router directly to the service
+# The application handles TLS termination (requires TLS_ENABLED=true)
+# apiVersion: route.openshift.io/v1
+# kind: Route
+# metadata:
+#   name: echo-server-passthrough
+#   labels:
+#     app: echo-server
+# spec:
+#   # host: echo-passthrough.apps.example.com
+#   
+#   to:
+#     kind: Service
+#     name: echo-server
+#     weight: 100
+#   port:
+#     targetPort: https  # Target the HTTPS port (8443)
+#   tls:
+#     termination: passthrough
+#     insecureEdgeTerminationPolicy: Redirect
+
+---
+# Re-encrypt Termination Route
+# TLS is terminated at the router and re-encrypted to the service
+# Provides end-to-end encryption (requires TLS_ENABLED=true)
+# apiVersion: route.openshift.io/v1
+# kind: Route
+# metadata:
+#   name: echo-server-reencrypt
+#   labels:
+#     app: echo-server
+# spec:
+#   # host: echo-reencrypt.apps.example.com
+#   
+#   to:
+#     kind: Service
+#     name: echo-server
+#     weight: 100
+#   port:
+#     targetPort: https  # Target the HTTPS port (8443)
+#   tls:
+#     termination: reencrypt
+#     insecureEdgeTerminationPolicy: Redirect
+#     # Optional: specify custom certificates
+#     # certificate: |
+#     #   -----BEGIN CERTIFICATE-----
+#     #   ...
+#     #   -----END CERTIFICATE-----
+#     # key: |
+#     #   -----BEGIN PRIVATE KEY-----
+#     #   ...
+#     #   -----END PRIVATE KEY-----
+#     # caCertificate: |
+#     #   -----BEGIN CERTIFICATE-----
+#     #   ...
+#     #   -----END CERTIFICATE-----
+#     # destinationCACertificate: |
+#     #   -----BEGIN CERTIFICATE-----
+#     #   ...
+#     #   -----END CERTIFICATE-----
