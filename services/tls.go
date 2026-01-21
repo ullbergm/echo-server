@@ -38,10 +38,12 @@ func (t *TLSService) GetOrGenerateCertificate(certFile, keyFile string) (tls.Cer
 			}
 
 			// Store PEM data for logging
+			// #nosec G304 -- Certificate file path is from configuration, not user input
 			t.certPEM, err = os.ReadFile(certFile)
 			if err != nil {
 				log.Printf("Warning: Failed to read certificate file for logging: %v", err)
 			}
+			// #nosec G304 -- Key file path is from configuration, not user input
 			t.keyPEM, err = os.ReadFile(keyFile)
 			if err != nil {
 				log.Printf("Warning: Failed to read key file for logging: %v", err)
