@@ -11,6 +11,8 @@ echo-server
 
 # Output of the go coverage tool
 *.out
+coverage.html
+coverage.out
 
 # Dependency directories
 vendor/
@@ -28,3 +30,10 @@ go.work
 # OS files
 .DS_Store
 Thumbs.db
+
+# Air - Live reload for Go
+tmp/
+build-errors.log
+
+# Docker volumes
+certs/
