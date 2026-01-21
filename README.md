@@ -9,6 +9,7 @@ A cloud-native HTTP echo server built with Golang and Fiber that reflects reques
 - **🌐 Dual Format** - Beautiful HTML for browsers, clean JSON for APIs  
 - **☸️ Kubernetes Native** - Shows pod metadata via environment variables when running in K8s
 - **🔐 JWT Decoder** - Automatically decodes JWT tokens from your requests
+- **🔒 TLS/HTTPS Support** - Optional HTTPS with automatic self-signed certificate generation or custom certificates
 - **📊 Prometheus Metrics** - Built-in metrics endpoint for monitoring
 - **📈 Monitor Dashboard** - Real-time server metrics (CPU, RAM, connections)
 - **🎯 Custom Status Codes** - Test error handling by controlling response status
@@ -21,11 +22,25 @@ A cloud-native HTTP echo server built with Golang and Fiber that reflects reques
 ### Run with Docker
 
 ```bash
+# Build the image
 docker build -t echo-server:latest .
+
+# Run with HTTP only
 docker run -p 8080:8080 echo-server:latest
+
+# Run with HTTPS enabled (self-signed certificate)
+docker run -p 8080:8080 -p 8443:8443 \
+  -e TLS_ENABLED=true \
+  echo-server:latest
+
+# Run with custom certificates
+docker run -p 8080:8080 -p 8443:8443 \
+  -e TLS_ENABLED=true \
+  -v /path/to/certs:/certs:ro \
+  echo-server:latest
 ```
 
-Then open http://localhost:8080 in your browser!
+Then open http://localhost:8080 (or https://localhost:8443) in your browser!
 
 ### Run Locally
 
@@ -60,7 +75,8 @@ The version is automatically injected at build time from git tags/commits. If no
 
 Environment variables:
 
-- `PORT` - Server port (default: 8080)
+### General Configuration
+- `PORT` - HTTP server port (default: 8080)
 - `FIBER_PREFORK` - Enable prefork mode for multi-core scalability (default: false) - Linux only
 - `ECHO_PAGE_TITLE` - Custom page title for HTML interface
 - `ECHO_ENVIRONMENT_VARIABLES_DISPLAY` - Comma-separated list of env vars to display
@@ -68,6 +84,18 @@ Environment variables:
 - `JWT_HEADER_NAMES` - Comma-separated list of headers to check for JWT (default: Authorization,X-JWT-Token,X-Auth-Token,JWT-Token)
 - `HEALTH_READINESS_DELAY_SECONDS` - Delay before readiness probe returns healthy (default: 0)
 - `LOG_HEALTHCHECKS` - Enable logging of healthcheck requests (default: false)
+
+### TLS/HTTPS Configuration
+- `TLS_ENABLED` - Enable TLS/HTTPS support (default: false)
+- `TLS_PORT` - HTTPS server port (default: 8443)
+- `TLS_CERT_FILE` - Path to TLS certificate file (default: /certs/tls.crt)
+- `TLS_KEY_FILE` - Path to TLS private key file (default: /certs/tls.key)
+
+When `TLS_ENABLED=true`:
+- If certificate files exist at the specified paths, they will be loaded
+- If certificate files don't exist, a self-signed certificate is automatically generated in memory
+- Both HTTP (PORT) and HTTPS (TLS_PORT) servers run simultaneously
+- Self-signed certificates are valid for 365 days with 2048-bit RSA keys
 
 ## API Endpoints
 
@@ -153,6 +181,149 @@ You can also retrieve metrics as JSON:
 curl -H "Accept: application/json" http://localhost:8080/monitor
 ```
 
+## TLS/HTTPS Support
+
+The echo server supports TLS/HTTPS with automatic self-signed certificate generation or custom certificates.
+
+### Quick Start with TLS
+
+```bash
+# Enable HTTPS with auto-generated self-signed certificate
+TLS_ENABLED=true ./echo-server
+
+# Both servers will start:
+# - HTTP on port 8080
+# - HTTPS on port 8443
+
+# Test HTTP endpoint
+curl http://localhost:8080/
+
+# Test HTTPS endpoint (with self-signed cert)
+curl -k https://localhost:8443/
+```
+
+### Using Custom Certificates
+
+```bash
+# Option 1: Using file paths
+TLS_ENABLED=true \
+TLS_CERT_FILE=/path/to/cert.pem \
+TLS_KEY_FILE=/path/to/key.pem \
+./echo-server
+
+# Option 2: Using Docker with mounted certificates
+docker run -p 8080:8080 -p 8443:8443 \
+  -e TLS_ENABLED=true \
+  -v /path/to/certs:/certs:ro \
+  echo-server:latest
+```
+
+### TLS Features
+
+- **Dual-Stack Operation**: HTTP and HTTPS servers run simultaneously when TLS is enabled
+- **Auto-Generated Certificates**: Self-signed certificates are automatically created when no certificate files are found
+- **Certificate Information**: View certificate details (subject, issuer, expiry, serial number) in the echo response
+- **TLS Connection Info**: Each request shows whether it was received via HTTP or HTTPS
+- **Protocol Metrics**: Prometheus metrics track HTTP vs HTTPS requests separately
+
+### Kubernetes/OpenShift TLS Integration
+
+#### Using Kubernetes Secrets
+
+```bash
+# Create TLS secret from certificate files
+kubectl create secret tls echo-server-tls \
+  --cert=path/to/tls.crt \
+  --key=path/to/tls.key
+
+# Apply deployment with TLS enabled
+kubectl apply -f deploy/kubernetes/deployment.yaml
+```
+
+#### Using cert-manager (Automated Certificates)
+
+cert-manager automatically provisions and renews TLS certificates from Let's Encrypt or other ACME providers.
+
+**Prerequisites:**
+- cert-manager installed in your cluster ([installation guide](https://cert-manager.io/docs/installation/))
+- ClusterIssuer or Issuer configured
+
+**Deploy with cert-manager:**
+
+```bash
+# 1. Apply the Certificate resource
+kubectl apply -f deploy/kubernetes/certificate.yaml
+
+# 2. cert-manager will automatically create the echo-server-tls secret
+
+# 3. Deploy the application with TLS enabled
+kubectl apply -f deploy/kubernetes/deployment.yaml
+
+# 4. Apply the Ingress with TLS
+kubectl apply -f deploy/kubernetes/ingress.yaml
+```
+
+The Certificate resource (`deploy/kubernetes/certificate.yaml`) specifies:
+- Certificate duration and renewal periods
+- DNS names the certificate is valid for
+- Reference to the Issuer/ClusterIssuer
+- Secret name where the certificate will be stored
+
+cert-manager will automatically:
+- Request a certificate from the configured issuer
+- Store the certificate in the specified Kubernetes secret
+- Renew the certificate before it expires
+
+#### OpenShift Routes with TLS
+
+OpenShift provides three TLS termination options:
+
+**1. Edge Termination (Recommended)**
+- TLS is terminated at the router
+- Traffic to the service is HTTP
+- No application-side TLS configuration needed
+
+```bash
+# Apply edge termination route (default)
+kubectl apply -f deploy/openshift/route.yaml
+```
+
+**2. Passthrough Termination**
+- TLS traffic passes through the router to the service
+- Application handles TLS termination (requires `TLS_ENABLED=true`)
+- End-to-end encryption
+
+```yaml
+# Uncomment the passthrough route in deploy/openshift/route.yaml
+tls:
+  termination: passthrough
+  insecureEdgeTerminationPolicy: Redirect
+```
+
+**3. Re-encrypt Termination**
+- TLS is terminated at the router and re-encrypted to the service
+- Requires `TLS_ENABLED=true` in the application
+- Provides end-to-end encryption with router-based certificate management
+
+```yaml
+# Uncomment the re-encrypt route in deploy/openshift/route.yaml
+tls:
+  termination: reencrypt
+  insecureEdgeTerminationPolicy: Redirect
+```
+
+### Self-Signed Certificate Details
+
+When TLS is enabled without certificate files, the server automatically generates a self-signed certificate with:
+- **Algorithm**: RSA 2048-bit
+- **Validity**: 365 days from generation
+- **Subject**: CN=<hostname>, O=Echo Server
+- **DNS Names**: <hostname>, localhost
+- **Key Usage**: Key Encipherment, Digital Signature
+- **Extended Key Usage**: Server Authentication
+
+**Note:** Self-signed certificates are suitable for testing and development. For production use, use certificates from a trusted Certificate Authority or cert-manager.
+
 ## Middleware Stack
 
 1. **Recovery** - Panic handling
@@ -204,6 +375,174 @@ docker run -e FIBER_PREFORK=true -p 8080:8080 echo-server:latest
 - **Faster JSON operations**: 2-3x improvement in JSON encoding/decoding
 - **Reduced allocations**: Lower memory footprint and GC pressure
 - **Better scalability**: Prefork mode enables true multi-core utilization
+
+## TLS/HTTPS Support
+
+The echo server supports optional TLS/HTTPS with flexible certificate management.
+
+### Enable TLS
+
+Enable HTTPS by setting the `TLS_ENABLED` environment variable:
+
+```bash
+# Run with TLS enabled (using self-signed certificate)
+TLS_ENABLED=true ./echo-server
+
+# With Docker
+docker run -e TLS_ENABLED=true -p 8080:8080 -p 8443:8443 echo-server:latest
+```
+
+When TLS is enabled:
+- **HTTP server** continues running on port 8080 (or custom `PORT`)
+- **HTTPS server** runs on port 8443 (or custom `TLS_PORT`)
+- Both servers share the same routes, middleware, and handlers
+
+### Certificate Management
+
+#### Option 1: Self-Signed Certificates (Automatic)
+
+If no certificate files are provided, the server automatically generates a self-signed certificate:
+
+```bash
+# Automatically generates self-signed certificate
+TLS_ENABLED=true ./echo-server
+```
+
+**Self-signed certificate properties:**
+- 2048-bit RSA key
+- Valid for 365 days
+- Includes hostname and localhost in DNS names
+- Generated in memory (not written to disk)
+
+#### Option 2: Custom Certificates
+
+Provide your own certificates via environment variables:
+
+```bash
+# Using custom certificate files
+TLS_ENABLED=true \
+TLS_CERT_FILE=/path/to/cert.pem \
+TLS_KEY_FILE=/path/to/key.pem \
+./echo-server
+
+# With Docker (mount certificate directory)
+docker run \
+  -e TLS_ENABLED=true \
+  -e TLS_CERT_FILE=/certs/tls.crt \
+  -e TLS_KEY_FILE=/certs/tls.key \
+  -v /local/certs:/certs:ro \
+  -p 8080:8080 -p 8443:8443 \
+  echo-server:latest
+```
+
+### Kubernetes Integration
+
+Example Kubernetes deployment with TLS:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: echo-server-tls
+type: kubernetes.io/tls
+data:
+  tls.crt: <base64-encoded-cert>
+  tls.key: <base64-encoded-key>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo-server
+spec:
+  template:
+    spec:
+      containers:
+      - name: echo-server
+        image: echo-server:latest
+        env:
+        - name: TLS_ENABLED
+          value: "true"
+        - name: TLS_CERT_FILE
+          value: "/certs/tls.crt"
+        - name: TLS_KEY_FILE
+          value: "/certs/tls.key"
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 8443
+          name: https
+        volumeMounts:
+        - name: tls-certs
+          mountPath: /certs
+          readOnly: true
+      volumes:
+      - name: tls-certs
+        secret:
+          secretName: echo-server-tls
+```
+
+### Testing HTTPS
+
+```bash
+# Test HTTPS endpoint (self-signed certificate)
+curl -k https://localhost:8443/
+
+# Test with certificate verification disabled
+curl --insecure https://localhost:8443/api/test
+
+# View certificate information
+openssl s_client -connect localhost:8443 -showcerts
+```
+
+### TLS Response Information
+
+When TLS is enabled, the echo response includes TLS information:
+
+**Server TLS Info** (`server.tls`):
+- Certificate subject and issuer
+- Certificate validity period (notBefore, notAfter)
+- Certificate serial number
+- DNS names in certificate
+
+**Request TLS Info** (`request.tls`):
+- Whether the specific request used TLS
+- TLS version (when available)
+- Cipher suite information (when available)
+
+**Example JSON response:**
+```json
+{
+  "request": {
+    "tls": {
+      "enabled": true,
+      "version": "TLS 1.3"
+    }
+  },
+  "server": {
+    "tls": {
+      "enabled": true,
+      "subject": "CN=echo-server,O=Echo Server",
+      "issuer": "CN=echo-server,O=Echo Server",
+      "notBefore": "2024-01-20T12:00:00Z",
+      "notAfter": "2025-01-20T12:00:00Z",
+      "serialNumber": "123456789",
+      "dnsNames": ["echo-server", "localhost"]
+    }
+  }
+}
+```
+
+### Metrics
+
+When TLS is enabled, Prometheus metrics include a `protocol` label to distinguish HTTP from HTTPS requests:
+
+```
+# HTTP requests
+echo_requests_total{method="GET",uri="/",protocol="http"} 42
+
+# HTTPS requests  
+echo_requests_total{method="GET",uri="/",protocol="https"} 58
+```
 
 ## License
 

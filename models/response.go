@@ -18,6 +18,7 @@ type RequestInfo struct {
 	Body          *BodyInfo         `json:"body,omitempty"`
 	Cookies       []CookieInfo      `json:"cookies,omitempty"`
 	Compression   *CompressionInfo  `json:"compression,omitempty"`
+	TLS           *RequestTLSInfo   `json:"tls,omitempty"`
 }
 
 // BodyInfo contains information about the request body
@@ -34,6 +35,7 @@ type ServerInfo struct {
 	Hostname    string            `json:"hostname"`
 	HostAddress string            `json:"hostAddress,omitempty"`
 	Environment map[string]string `json:"environment"`
+	TLS         *TLSInfo          `json:"tls,omitempty"`
 }
 
 // KubernetesInfo contains Kubernetes pod metadata
@@ -73,4 +75,23 @@ type CompressionInfo struct {
 	AcceptedEncodings []string `json:"acceptedEncodings,omitempty"`
 	ResponseEncoding  string   `json:"responseEncoding,omitempty"`
 	Supported         bool     `json:"supported"`
+}
+
+// TLSInfo contains TLS certificate information for the server
+type TLSInfo struct {
+	Enabled      bool     `json:"enabled"`
+	Version      string   `json:"version,omitempty"`
+	Subject      string   `json:"subject,omitempty"`
+	Issuer       string   `json:"issuer,omitempty"`
+	NotBefore    string   `json:"notBefore,omitempty"`
+	NotAfter     string   `json:"notAfter,omitempty"`
+	SerialNumber string   `json:"serialNumber,omitempty"`
+	DNSNames     []string `json:"dnsNames,omitempty"`
+}
+
+// RequestTLSInfo contains TLS information about the specific request
+type RequestTLSInfo struct {
+	Enabled bool   `json:"enabled"`
+	Version string `json:"version,omitempty"`
+	Cipher  string `json:"cipher,omitempty"`
 }

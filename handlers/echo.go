@@ -78,7 +78,7 @@ func EchoHandlerHead() fiber.Handler {
 func buildEchoResponse(c *fiber.Ctx, jwtService *services.JWTService, bodyService *services.BodyService) models.EchoResponse {
 	response := models.EchoResponse{
 		Request:    buildRequestInfo(c, bodyService),
-		Server:     buildServerInfo(),
+		Server:     buildServerInfo(c),
 		Kubernetes: getKubernetesInfo(),
 	}
 
@@ -100,6 +100,7 @@ func buildRequestInfo(c *fiber.Ctx, bodyService *services.BodyService) models.Re
 		RemoteAddress: getRemoteAddress(c),
 		Compression:   getCompressionInfo(c),
 		Cookies:       parseCookies(c),
+		TLS:           getRequestTLSInfo(c),
 	}
 
 	// Parse body for POST, PUT, PATCH, DELETE methods
@@ -126,7 +127,7 @@ func buildHeadersMap(c *fiber.Ctx) map[string]string {
 	return headers
 }
 
-func buildServerInfo() models.ServerInfo {
+func buildServerInfo(c *fiber.Ctx) models.ServerInfo {
 	hostname, _ := os.Hostname()
 	hostAddress := getHostAddress()
 
@@ -134,6 +135,7 @@ func buildServerInfo() models.ServerInfo {
 		Hostname:    hostname,
 		HostAddress: hostAddress,
 		Environment: getEnvironmentVariables(),
+		TLS:         getServerTLSInfo(),
 	}
 
 	return info
@@ -427,4 +429,73 @@ func getCompressionInfo(c *fiber.Ctx) *models.CompressionInfo {
 		ResponseEncoding:  responseEncoding,
 		Supported:         len(encodings) > 0,
 	}
+}
+
+// getRequestTLSInfo extracts TLS information from the request
+func getRequestTLSInfo(c *fiber.Ctx) *models.RequestTLSInfo {
+	// Check if request is over TLS
+	if c.Protocol() != "https" {
+		return &models.RequestTLSInfo{
+			Enabled: false,
+		}
+	}
+
+	// Get TLS connection state
+	// Note: Fiber doesn't directly expose TLS connection state in all cases
+	// We detect HTTPS from the protocol. In production behind load balancers,
+	// TLS version may be available via custom headers (varies by load balancer)
+	tlsInfo := &models.RequestTLSInfo{
+		Enabled: true,
+	}
+
+	// Check for TLS version from load balancer headers
+	// Some load balancers (e.g., AWS ALB, nginx) can set custom headers with TLS info
+	// This is optional and load-balancer specific
+	if tlsVersion := c.Get("X-TLS-Version"); tlsVersion != "" {
+		tlsInfo.Version = tlsVersion
+	}
+
+	return tlsInfo
+}
+
+// getServerTLSInfo gets TLS configuration information for the server
+func getServerTLSInfo() *models.TLSInfo {
+	// Check if TLS is enabled via environment variable
+	tlsEnabled := os.Getenv("TLS_ENABLED")
+	if tlsEnabled == "" || tlsEnabled == "false" {
+		return nil
+	}
+
+	// TLS is enabled, return basic info
+	// The certificate details are stored during initialization
+	tlsInfo := &models.TLSInfo{
+		Enabled: true,
+	}
+
+	// Try to read certificate information from environment
+	// This will be set during server initialization
+	if certSubject := os.Getenv("_TLS_CERT_SUBJECT"); certSubject != "" {
+		tlsInfo.Subject = certSubject
+	}
+	if certIssuer := os.Getenv("_TLS_CERT_ISSUER"); certIssuer != "" {
+		tlsInfo.Issuer = certIssuer
+	}
+	if notBefore := os.Getenv("_TLS_CERT_NOT_BEFORE"); notBefore != "" {
+		tlsInfo.NotBefore = notBefore
+	}
+	if notAfter := os.Getenv("_TLS_CERT_NOT_AFTER"); notAfter != "" {
+		tlsInfo.NotAfter = notAfter
+	}
+	if serialNumber := os.Getenv("_TLS_CERT_SERIAL"); serialNumber != "" {
+		tlsInfo.SerialNumber = serialNumber
+	}
+	if dnsNames := os.Getenv("_TLS_CERT_DNS_NAMES"); dnsNames != "" {
+		names := strings.Split(dnsNames, ",")
+		for i, name := range names {
+			names[i] = strings.TrimSpace(name)
+		}
+		tlsInfo.DNSNames = names
+	}
+
+	return tlsInfo
 }

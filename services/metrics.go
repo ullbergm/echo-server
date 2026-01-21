@@ -22,7 +22,7 @@ func NewMetricsService() *MetricsService {
 				Name: "echo_requests_total",
 				Help: "Total number of echo requests",
 			},
-			[]string{"method", "uri"},
+			[]string{"method", "uri", "protocol"},
 		),
 		requestLatency: promauto.NewHistogramVec(
 			prometheus.HistogramOpts{
@@ -30,7 +30,7 @@ func NewMetricsService() *MetricsService {
 				Help:    "HTTP request latency in seconds",
 				Buckets: prometheus.DefBuckets,
 			},
-			[]string{"method", "uri"},
+			[]string{"method", "uri", "protocol"},
 		),
 	}
 }
@@ -47,8 +47,14 @@ func (m *MetricsService) MetricsMiddleware(c *fiber.Ctx) error {
 	method := c.Method()
 	uri := c.Path()
 
-	m.requestCounter.WithLabelValues(method, uri).Inc()
-	m.requestLatency.WithLabelValues(method, uri).Observe(duration)
+	// Determine protocol (http or https)
+	protocol := "http"
+	if c.Protocol() == "https" {
+		protocol = "https"
+	}
+
+	m.requestCounter.WithLabelValues(method, uri, protocol).Inc()
+	m.requestLatency.WithLabelValues(method, uri, protocol).Observe(duration)
 
 	return err
 }

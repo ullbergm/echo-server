@@ -24,7 +24,19 @@ spec:
         ports:
         - containerPort: 8080
           name: http
+        - containerPort: 8443
+          name: https
         env:
+        # TLS Configuration (optional)
+        # Uncomment to enable TLS/HTTPS
+        # - name: TLS_ENABLED
+        #   value: "true"
+        # - name: TLS_PORT
+        #   value: "8443"
+        # - name: TLS_CERT_FILE
+        #   value: "/certs/tls.crt"
+        # - name: TLS_KEY_FILE
+        #   value: "/certs/tls.key"
         # Kubernetes pod metadata via Downward API
         - name: K8S_NAMESPACE
           valueFrom:
@@ -56,16 +68,26 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.annotations['description']
+        # Volume mounts for TLS certificates (optional)
+        # Uncomment when using TLS with certificates from secrets
+        # volumeMounts:
+        # - name: tls-certs
+        #   mountPath: /certs
+        #   readOnly: true
         livenessProbe:
           httpGet:
             path: /healthz/live
             port: 8080
+            # Use HTTPS when TLS is enabled
+            # scheme: HTTPS
           initialDelaySeconds: 10
           periodSeconds: 10
         readinessProbe:
           httpGet:
             path: /healthz/ready
             port: 8080
+            # Use HTTPS when TLS is enabled
+            # scheme: HTTPS
           initialDelaySeconds: 5
           periodSeconds: 5
         resources:
@@ -81,3 +103,14 @@ spec:
           capabilities:
             drop:
             - ALL
+      # Volumes for TLS certificates (optional)
+      # Uncomment when using TLS with certificates from secrets
+      # volumes:
+      # - name: tls-certs
+      #   secret:
+      #     secretName: echo-server-tls
+      #     items:
+      #     - key: tls.crt
+      #       path: tls.crt
+      #     - key: tls.key
+      #       path: tls.key
