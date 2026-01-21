@@ -236,11 +236,8 @@ task test           # Run tests
 task lint           # Run linter
 task pre-commit-run # Run all pre-commit checks
 
-# Quick Start
-task run               # Run the server
-task dev               # Run with hot reload
-task test              # Run tests
-task build             # Build binary
+# Build
+task build          # Build binary
 
 # Development
 task test-coverage     # Run tests with coverage
@@ -256,8 +253,6 @@ task pre-commit-install # Install pre-commit hooks
 task docker-build      # Build Docker image
 task docker-run        # Run Docker container
 task docker-all        # Build and run
-task docker-run     # Run container
-task docker-all     # Build and run
 
 # More
 task ci             # Run all CI checks

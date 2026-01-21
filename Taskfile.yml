@@ -283,5 +283,207 @@ tasks:
         echo "  task docker-run       - Run Docker container"
         echo "  task docker-all       - Build and run Docker"
         echo ""
+        echo "Setup:"
+        echo "  task setup            - First-time setup verification"
+        echo ""
         echo "For all available commands, run: task --list"
+    silent: true
+
+  setup:
+    desc: First-time setup - verify environment and install dependencies
+    cmds:
+      - |
+        echo "🔍 Echo Server Development Setup"
+        echo "=================================="
+        echo ""
+
+        # Check Go version
+        echo "📦 Checking Go installation..."
+        if command -v go &> /dev/null; then
+          GO_VERSION=$(go version | awk '{print $3}')
+          echo "   ✓ Go installed: $GO_VERSION"
+        else
+          echo "   ❌ Go not found. Please install Go 1.25+: https://go.dev/dl/"
+          exit 1
+        fi
+
+        # Check Task version
+        echo "📦 Checking Task installation..."
+        if command -v task &> /dev/null; then
+          TASK_VERSION=$(task --version 2>&1 | head -1)
+          echo "   ✓ Task installed: $TASK_VERSION"
+        else
+          echo "   ❌ Task not found. Please install: https://taskfile.dev/installation/"
+          exit 1
+        fi
+
+        # Check Docker (optional)
+        echo "📦 Checking Docker installation..."
+        if command -v docker &> /dev/null; then
+          DOCKER_VERSION=$(docker --version 2>&1)
+          echo "   ✓ Docker installed: $DOCKER_VERSION"
+        else
+          echo "   ⚠️  Docker not found (optional for container testing)"
+        fi
+
+        # Check Git
+        echo "📦 Checking Git installation..."
+        if command -v git &> /dev/null; then
+          GIT_VERSION=$(git --version)
+          echo "   ✓ Git installed: $GIT_VERSION"
+        else
+          echo "   ❌ Git not found. Please install: https://git-scm.com/downloads"
+          exit 1
+        fi
+
+        echo ""
+        echo "🔧 Verifying Go dependencies..."
+        go mod download
+        go mod verify
+        echo "   ✓ Dependencies verified"
+
+        echo ""
+        echo "🧪 Running quick test..."
+        if go test ./... -count=1 -short > /dev/null 2>&1; then
+          echo "   ✓ Tests passing"
+        else
+          echo "   ⚠️  Some tests failed. Run 'task test-verbose' for details."
+        fi
+
+        echo ""
+        echo "🏗️  Testing build..."
+        if go build -o /tmp/echo-server-test . > /dev/null 2>&1; then
+          rm -f /tmp/echo-server-test
+          echo "   ✓ Build successful"
+        else
+          echo "   ❌ Build failed. Check for errors."
+          exit 1
+        fi
+
+        # Check pre-commit (optional)
+        echo ""
+        echo "📦 Checking pre-commit installation..."
+        if command -v pre-commit &> /dev/null; then
+          PRECOMMIT_VERSION=$(pre-commit --version)
+          echo "   ✓ pre-commit installed: $PRECOMMIT_VERSION"
+
+          # Check if hooks are installed
+          if [ -f ".git/hooks/pre-commit" ]; then
+            echo "   ✓ Pre-commit hooks installed"
+          else
+            echo "   ⚠️  Pre-commit hooks not installed. Run 'task pre-commit-install'"
+          fi
+        else
+          echo "   ⚠️  pre-commit not found (optional but recommended)"
+          echo "      Install with: pip install pre-commit"
+        fi
+
+        echo ""
+        echo "=========================================="
+        echo "✅ Setup verification complete!"
+        echo ""
+        echo "Quick start commands:"
+        echo "  task run    - Start the server"
+        echo "  task dev    - Start with hot reload"
+        echo "  task test   - Run tests"
+        echo "  task help   - Show all commands"
+        echo ""
+        echo "Happy coding! 🎉"
+    silent: true
+
+  doctor:
+    desc: Diagnose common development environment issues
+    cmds:
+      - |
+        echo "🩺 Echo Server Development Environment Diagnostics"
+        echo "==================================================="
+        echo ""
+
+        ISSUES=0
+
+        # Check Go version meets minimum
+        echo "📦 Go Version Check..."
+        if command -v go &> /dev/null; then
+          GO_VERSION=$(go version | grep -oP 'go\d+\.\d+' | sed 's/go//')
+          MAJOR=$(echo $GO_VERSION | cut -d. -f1)
+          MINOR=$(echo $GO_VERSION | cut -d. -f2)
+          if [ "$MAJOR" -ge 1 ] && [ "$MINOR" -ge 21 ]; then
+            echo "   ✓ Go version $GO_VERSION (meets minimum 1.21)"
+          else
+            echo "   ❌ Go version $GO_VERSION (requires 1.21+)"
+            ISSUES=$((ISSUES+1))
+          fi
+        else
+          echo "   ❌ Go not installed"
+          ISSUES=$((ISSUES+1))
+        fi
+
+        # Check CGO for race detection
+        echo "📦 CGO Status..."
+        if [ "$CGO_ENABLED" = "1" ] || [ -z "$CGO_ENABLED" ]; then
+          echo "   ✓ CGO enabled (race detection available)"
+        else
+          echo "   ⚠️  CGO disabled (set CGO_ENABLED=1 for race detection)"
+        fi
+
+        # Check module mode
+        echo "📦 Go Modules..."
+        if [ -f "go.mod" ]; then
+          echo "   ✓ go.mod found"
+          if go mod verify > /dev/null 2>&1; then
+            echo "   ✓ Dependencies verified"
+          else
+            echo "   ❌ Dependency verification failed. Run 'go mod tidy'"
+            ISSUES=$((ISSUES+1))
+          fi
+        else
+          echo "   ❌ go.mod not found"
+          ISSUES=$((ISSUES+1))
+        fi
+
+        # Check for common port conflicts
+        echo "📦 Port Availability..."
+        if command -v lsof &> /dev/null; then
+          if lsof -i :8080 > /dev/null 2>&1; then
+            echo "   ⚠️  Port 8080 is in use"
+          else
+            echo "   ✓ Port 8080 available"
+          fi
+          if lsof -i :8443 > /dev/null 2>&1; then
+            echo "   ⚠️  Port 8443 is in use"
+          else
+            echo "   ✓ Port 8443 available"
+          fi
+        else
+          echo "   ⚠️  Cannot check ports (lsof not available)"
+        fi
+
+        # Check template files
+        echo "📦 Template Files..."
+        if [ -f "templates/echo.html" ]; then
+          echo "   ✓ Echo template found"
+        else
+          echo "   ❌ templates/echo.html missing"
+          ISSUES=$((ISSUES+1))
+        fi
+
+        # Check for stale build artifacts
+        echo "📦 Build Artifacts..."
+        if [ -f "echo-server" ]; then
+          BINARY_AGE=$(find echo-server -mmin +60 2>/dev/null | wc -l)
+          if [ "$BINARY_AGE" -gt 0 ]; then
+            echo "   ⚠️  Binary older than 1 hour. Consider 'task build'"
+          else
+            echo "   ✓ Binary is recent"
+          fi
+        else
+          echo "   ℹ️  No binary (run 'task build')"
+        fi
+
+        echo ""
+        if [ $ISSUES -eq 0 ]; then
+          echo "✅ No issues found! Environment looks healthy."
+        else
+          echo "⚠️  Found $ISSUES issue(s). Please address them above."
+        fi
     silent: true
