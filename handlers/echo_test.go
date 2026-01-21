@@ -559,7 +559,7 @@ func TestEchoHandler_PostWithFormData(t *testing.T) {
 
 	app.Post("/test", EchoHandler(jwtService, bodyService))
 
-	formData := "username=johndoe&password=secret123&remember=true"
+	formData := "username=johndoe&password=secret123&remember=true" // pragma: allowlist secret
 	req := httptest.NewRequest("POST", "/test", strings.NewReader(formData))
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")

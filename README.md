@@ -71,6 +71,130 @@ task build-optimized
 
 The version is automatically injected at build time from git tags/commits. If not in a git repository, it defaults to "dev".
 
+### Pre-commit Hooks
+
+This project uses [pre-commit](https://pre-commit.com/) to ensure code quality before commits:
+
+**Installation:**
+
+```bash
+# Install pre-commit
+pip install pre-commit
+# Or on macOS:
+brew install pre-commit
+
+# Install the git hooks
+task pre-commit-install
+```
+
+**Usage:**
+
+```bash
+# Hooks run automatically on git commit
+git commit -m "feat(api): add new endpoint"
+
+# Run hooks manually on all files
+task pre-commit-run
+
+# Update hook versions
+task pre-commit-update
+
+# Skip hooks (not recommended)
+git commit --no-verify -m "message"
+```
+
+**What hooks run:**
+
+- Code formatting (gofmt)
+- Linting (golangci-lint)
+- Tests (go test with race detection)
+- YAML/Markdown linting
+- Dockerfile linting (hadolint)
+- Commit message validation (conventional commits)
+- Secret detection
+- Trailing whitespace and file endings
+
+### Commit Message Convention
+
+This project follows [Conventional Commits](https://www.conventionalcommits.org/) for commit messages:
+
+**Format:**
+
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+**Types:**
+
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation changes
+- `style`: Code style changes (formatting)
+- `refactor`: Code refactoring
+- `perf`: Performance improvements
+- `test`: Test changes
+- `build`: Build system changes
+- `ci`: CI/CD changes
+- `chore`: Other changes
+
+**Examples:**
+
+```bash
+feat(handlers): add custom status code support
+fix(jwt): handle missing authorization header
+docs: update README with TLS examples
+test(services): add body parser edge cases
+```
+
+**Validation:**
+
+```bash
+# Validate a commit message
+echo "feat(api): add new endpoint" | npx @commitlint/cli --config .commitlintrc.yml
+
+# Validate the last commit
+git log -1 --pretty=%B | npx @commitlint/cli --config .commitlintrc.yml
+
+# Show usage examples
+task commit-lint
+
+# Commit messages are auto-validated by pre-commit hook
+git commit -m "feat(api): add new endpoint"
+```
+
+See [COMMIT_CONVENTION.md](COMMIT_CONVENTION.md) for detailed guidelines.
+
+### Dev Container (Codespaces / VS Code)
+
+This project includes a complete dev container configuration with all tools pre-installed:
+
+**Open in GitHub Codespaces:**
+
+- Click "Code" → "Create codespace on main"
+- Everything is pre-configured and ready to use
+
+**Open in VS Code Dev Container:**
+
+```bash
+# Prerequisites: Docker and VS Code with "Dev Containers" extension
+# Open in VS Code, then:
+# F1 → "Dev Containers: Reopen in Container"
+```
+
+**Pre-installed tools:**
+
+- Go 1.25, Node.js LTS, Python 3.11
+- Task runner, pre-commit, commitlint
+- golangci-lint, hadolint, yamllint, markdownlint
+- All VS Code extensions (Go, Docker, Kubernetes, etc.)
+- Pre-commit hooks automatically configured
+
+See [.devcontainer/README.md](.devcontainer/README.md) for details.
+
 ### Using Task (Task Runner)
 
 This project uses [Task](https://taskfile.dev) as its command runner for better developer experience.
@@ -98,22 +222,33 @@ task                # Show available tasks (runs --list)
 task --list         # List all tasks with descriptions
 task help           # Show detailed help
 
-# Quick Start
+# Development workflow
 task run            # Run the server
-task dev            # Run with hot reload  
+task dev            # Run with hot reload
 task test           # Run tests
-task build          # Build binary
+task lint           # Run linter
+task pre-commit-run # Run all pre-commit checks
+
+# Quick Start
+task run               # Run the server
+task dev               # Run with hot reload
+task test              # Run tests
+task build             # Build binary
 
 # Development
-task test-coverage  # Run tests with coverage
-task test-race      # Run with race detection
-task coverage-view  # Generate and view coverage HTML
-task lint           # Run linter
-task lint-fix       # Auto-fix linting issues
-task fmt            # Format code
+task test-coverage     # Run tests with coverage
+task test-race         # Run with race detection
+task coverage-view     # Generate and view coverage HTML
+task lint              # Run linter
+task lint-fix          # Auto-fix linting issues
+task fmt               # Format code
+task pre-commit-run    # Run all pre-commit checks
+task pre-commit-install # Install pre-commit hooks
 
 # Docker
-task docker-build   # Build Docker image
+task docker-build      # Build Docker image
+task docker-run        # Run Docker container
+task docker-all        # Build and run
 task docker-run     # Run container
 task docker-all     # Build and run
 

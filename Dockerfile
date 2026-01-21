@@ -1,7 +1,7 @@
 # Multi-stage Dockerfile for Echo Server (Golang/Fiber)
 
 ## Stage 1: Build the Go binary
-FROM golang:1.25.6-alpine AS build
+FROM golang:1.25-alpine3.23 AS build
 
 # Install build dependencies
 RUN apk add --no-cache git
@@ -23,7 +23,7 @@ RUN VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "dev") && \
     CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w -X main.Version=$VERSION" -o echo-server .
 
 ## Stage 2: Create the runtime image
-FROM alpine:latest
+FROM alpine:3.23
 
 # Install ca-certificates for HTTPS
 RUN apk --no-cache add ca-certificates

@@ -62,7 +62,7 @@ func TestExtractAndDecodeJWTs(t *testing.T) {
 
 	headerB64 := base64.RawURLEncoding.EncodeToString(headerJSON)
 	payloadB64 := base64.RawURLEncoding.EncodeToString(payloadJSON)
-	signature := "SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+	signature := "SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c" // pragma: allowlist secret
 
 	validToken := headerB64 + "." + payloadB64 + "." + signature
 
@@ -261,8 +261,8 @@ func TestTruncateToken(t *testing.T) {
 		},
 		{
 			name:     "long token",
-			token:    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ",
-			expected: "eyJhbGciOi...MjM5MDIyfQ", // Last 10 chars of the actual token
+			token:    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ", // pragma: allowlist secret
+			expected: "eyJhbGciOi...MjM5MDIyfQ",                                                                                         // Last 10 chars of the actual token
 		},
 	}
 

@@ -231,7 +231,7 @@ func TestBodyService_FormDataWithSpecialCharacters(t *testing.T) {
 	service := NewBodyService()
 
 	// Form data with URL encoded special characters
-	formBody := []byte("email=john%2Btest%40example.com&name=John%20O%27Brien&password=p%40ssw%26rd%21")
+	formBody := []byte("email=john%2Btest%40example.com&name=John%20O%27Brien&password=p%40ssw%26rd%21") // pragma: allowlist secret
 	bodyInfo := service.ParseBody(formBody, "application/x-www-form-urlencoded")
 
 	if bodyInfo == nil {
@@ -257,7 +257,7 @@ func TestBodyService_FormDataWithSpecialCharacters(t *testing.T) {
 	}
 
 	if password, passOk := contentMap["password"].(string); passOk {
-		if password != "p@ssw&rd!" {
+		if password != "p@ssw&rd!" { // pragma: allowlist secret
 			t.Errorf("Expected password 'p@ssw&rd!', got %s", password)
 		}
 	}

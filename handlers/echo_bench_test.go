@@ -54,7 +54,7 @@ func BenchmarkEchoHandler_WithJWT(b *testing.B) {
 	app.Get("/test", EchoHandler(jwtService, bodyService))
 
 	// Valid JWT token (header.payload.signature)
-	token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+	token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c" //pragma: allowlist secret
 
 	req := httptest.NewRequest("GET", "/test", http.NoBody)
 	req.Header.Set("Accept", "application/json")

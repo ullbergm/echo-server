@@ -37,3 +37,6 @@ build-errors.log
 
 # Docker volumes
 certs/
+
+# Pre-commit
+.pre-commit-config.yaml.bak
