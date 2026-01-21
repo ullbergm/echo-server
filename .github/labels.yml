@@ -131,3 +131,11 @@
 - name: "duplicate"
   color: "cfd3d7"
   description: "This issue or pull request already exists"
+
+- name: "stale"
+  color: "cfd3d7"
+  description: "This issue or pull request has been automatically marked as stale due to inactivity"
+
+- name: "automated-issue"
+  color: "008672"
+  description: "This issue was created automatically by a bot"
