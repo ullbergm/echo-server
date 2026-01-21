@@ -44,7 +44,11 @@ The echo server provides the following capabilities:
 
 ## Build & Test Commands
 
-All commands should be executed from the repository root using Task (Taskfile.yml):
+All commands should be executed from the repository root using Task (Taskfile.yml).
+
+**Note:** The Taskfile uses `go run <package>@latest` for tools like golangci-lint, gosec, and air.
+This ensures consistent versions across all developers and CI without requiring manual tool installation.
+The tools are automatically downloaded and cached by Go when first used.
 
 ### Development
 ```bash
@@ -96,6 +100,21 @@ task version
 # Or use go commands directly
 go build -o echo-server
 GOOS=linux GOARCH=amd64 go build -o echo-server-linux
+```
+
+### Linting & Security
+```bash
+# Run linter (requires golangci-lint installed)
+task lint
+
+# Fix linting issues automatically
+task lint-fix
+
+# Run security checks (requires gosec installed)
+task security
+
+# Tools are run via 'go run <package>@latest' for consistency
+# No manual installation required - Go handles it automatically
 ```
 
 ### Docker
