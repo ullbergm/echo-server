@@ -54,6 +54,7 @@ jobs:
               'area/templates',
               'area/docker',
               'area/kubernetes'
+              'area/github'
             ];
             
             // Check for forbidden labels

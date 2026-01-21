@@ -52,6 +52,10 @@
   color: "c2e0c6"
   description: "Kubernetes deployment changes"
 
+- name: "area/github"
+  color: "cfd3d7"
+  description: "GitHub-related changes"
+
 # Size labels
 - name: "size/XS"
   color: "00ff00"

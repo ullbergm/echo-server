@@ -38,3 +38,7 @@ area/docker:
 area/kubernetes:
   - changed-files:
     - any-glob-to-any-file: ['deploy/kubernetes/**/*', 'deploy/openshift/**/*', 'kubernetes-deployment.yaml']
+
+area/github:
+  - changed-files:
+    - any-glob-to-any-file: ['.github/workflows/**/*', '.github/actions/**/*']
