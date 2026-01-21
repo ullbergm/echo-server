@@ -107,12 +107,19 @@ git commit --no-verify -m "message"
 
 - Code formatting (gofmt)
 - Linting (golangci-lint)
-- Tests (go test with race detection)
 - YAML/Markdown linting
 - Dockerfile linting (hadolint)
 - Commit message validation (conventional commits)
 - Secret detection
 - Trailing whitespace and file endings
+
+**CI/CD Integration:**
+
+All pre-commit hooks are automatically run in GitHub Actions workflows:
+
+- **Code Quality workflow** - Runs on all pushes and PRs
+- **Pre-commit workflow** - Dedicated workflow for all pre-commit checks including commit message validation on PRs
+- Ensures code quality before merging
 
 ### Commit Message Convention
 
