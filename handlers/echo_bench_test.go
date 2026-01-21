@@ -106,34 +106,3 @@ func BenchmarkEchoHandler_CustomStatus(b *testing.B) {
 		_ = resp.Body.Close()
 	}
 }
-
-func BenchmarkHealthHandler(b *testing.B) {
-	app := fiber.New()
-	app.Get("/health", HealthHandler())
-
-	req := httptest.NewRequest("GET", "/health", nil)
-
-	b.ResetTimer()
-	b.ReportAllocs()
-
-	for i := 0; i < b.N; i++ {
-		resp, _ := app.Test(req, -1)
-		_ = resp.Body.Close()
-	}
-}
-
-func BenchmarkMonitorHandler(b *testing.B) {
-	app := fiber.New()
-	app.Get("/monitor", MonitorHandler())
-
-	req := httptest.NewRequest("GET", "/monitor", nil)
-	req.Header.Set("Accept", "application/json")
-
-	b.ResetTimer()
-	b.ReportAllocs()
-
-	for i := 0; i < b.N; i++ {
-		resp, _ := app.Test(req, -1)
-		_ = resp.Body.Close()
-	}
-}
