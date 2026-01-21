@@ -187,7 +187,7 @@ jobs:
         id: github_release
         uses: mikepenz/release-changelog-builder-action@439f79b5b5428107c7688c1d2b0e8bacc9b8792c # v6
         with:
-          configuration: ".github/workflows/changelog/configuration.json"
+          configuration: ".github/changelog.json"
           toTag: ${{ needs.release.outputs.tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

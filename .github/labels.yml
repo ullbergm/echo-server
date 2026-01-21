@@ -1,0 +1,133 @@
+---
+# Label definitions for the repository
+# Synced automatically by .github/workflows/label-sync.yml
+
+# Type labels
+- name: "type/bug"
+  color: "d73a4a"
+  description: "Something isn't working"
+
+- name: "type/enhancement"
+  color: "a2eeef"
+  description: "New feature or request"
+
+- name: "type/documentation"
+  color: "0075ca"
+  description: "Improvements or additions to documentation"
+
+- name: "type/refactor"
+  color: "fbca04"
+  description: "Code refactoring"
+
+- name: "type/ci"
+  color: "cfd3d7"
+  description: "CI/CD pipeline changes"
+
+- name: "type/dependencies"
+  color: "0366d6"
+  description: "Dependency updates"
+
+# Area labels
+- name: "area/handlers"
+  color: "c2e0c6"
+  description: "Changes to HTTP handlers"
+
+- name: "area/models"
+  color: "c2e0c6"
+  description: "Changes to data models"
+
+- name: "area/services"
+  color: "c2e0c6"
+  description: "Changes to services"
+
+- name: "area/templates"
+  color: "c2e0c6"
+  description: "Changes to HTML templates"
+
+- name: "area/docker"
+  color: "c2e0c6"
+  description: "Docker-related changes"
+
+- name: "area/kubernetes"
+  color: "c2e0c6"
+  description: "Kubernetes deployment changes"
+
+- name: "area/github"
+  color: "cfd3d7"
+  description: "GitHub-related changes"
+
+# Size labels
+- name: "size/XS"
+  color: "00ff00"
+  description: "Extra small PR (0-9 lines)"
+
+- name: "size/S"
+  color: "66ff66"
+  description: "Small PR (10-49 lines)"
+
+- name: "size/M"
+  color: "ffff00"
+  description: "Medium PR (50-199 lines)"
+
+- name: "size/L"
+  color: "ff9900"
+  description: "Large PR (200-499 lines)"
+
+- name: "size/XL"
+  color: "ff6600"
+  description: "Extra large PR (500-999 lines)"
+
+# Priority labels
+- name: "priority/critical"
+  color: "b60205"
+  description: "Critical priority"
+
+- name: "priority/high"
+  color: "d93f0b"
+  description: "High priority"
+
+- name: "priority/medium"
+  color: "fbca04"
+  description: "Medium priority"
+
+- name: "priority/low"
+  color: "0e8a16"
+  description: "Low priority"
+
+# Status labels
+- name: "status/needs-review"
+  color: "fbca04"
+  description: "Needs code review"
+
+- name: "status/needs-testing"
+  color: "d4c5f9"
+  description: "Needs testing"
+
+- name: "status/blocked"
+  color: "d73a4a"
+  description: "Blocked by something"
+
+- name: "status/wip"
+  color: "fef2c0"
+  description: "Work in progress"
+
+# Special labels
+- name: "good first issue"
+  color: "7057ff"
+  description: "Good for newcomers"
+
+- name: "help wanted"
+  color: "008672"
+  description: "Extra attention is needed"
+
+- name: "invalid"
+  color: "e4e669"
+  description: "This doesn't seem right"
+
+- name: "wontfix"
+  color: "ffffff"
+  description: "This will not be worked on"
+
+- name: "duplicate"
+  color: "cfd3d7"
+  description: "This issue or pull request already exists"

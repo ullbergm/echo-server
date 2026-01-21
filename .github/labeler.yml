@@ -1,0 +1,44 @@
+# Configuration for actions/labeler
+# Automatically label PRs based on changed files
+
+# Type labels
+type/documentation:
+  - changed-files:
+    - any-glob-to-any-file: ['**/*.md', 'docs/**/*']
+
+type/ci:
+  - changed-files:
+    - any-glob-to-any-file: ['.github/workflows/**/*', '.github/actions/**/*']
+
+type/dependencies:
+  - changed-files:
+    - any-glob-to-any-file: ['go.mod', 'go.sum']
+
+# Area labels
+area/handlers:
+  - changed-files:
+    - any-glob-to-any-file: ['handlers/**/*']
+
+area/models:
+  - changed-files:
+    - any-glob-to-any-file: ['models/**/*']
+
+area/services:
+  - changed-files:
+    - any-glob-to-any-file: ['services/**/*']
+
+area/templates:
+  - changed-files:
+    - any-glob-to-any-file: ['templates/**/*']
+
+area/docker:
+  - changed-files:
+    - any-glob-to-any-file: ['Dockerfile', 'docker-compose.yml', '.dockerignore']
+
+area/kubernetes:
+  - changed-files:
+    - any-glob-to-any-file: ['deploy/kubernetes/**/*', 'deploy/openshift/**/*', 'kubernetes-deployment.yaml']
+
+area/github:
+  - changed-files:
+    - any-glob-to-any-file: ['.github/workflows/**/*', '.github/actions/**/*']
