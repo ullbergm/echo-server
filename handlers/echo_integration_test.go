@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"io"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
@@ -41,6 +42,7 @@ func TestAllHTTPMethods(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to send %s request: %v", method, err)
 			}
+			defer resp.Body.Close()
 
 			if resp.StatusCode != fiber.StatusOK {
 				t.Errorf("Expected status 200 for %s, got %d", method, resp.StatusCode)
@@ -99,13 +101,14 @@ func TestKubernetesInfoWithAnnotations(t *testing.T) {
 
 	app.Get("/test", EchoHandler(jwtService, bodyService))
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequest("GET", "/test", http.NoBody)
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := app.Test(req, -1)
 	if err != nil {
 		t.Fatalf("Failed to send request: %v", err)
 	}
+	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -235,13 +238,14 @@ func TestEnvironmentVariablesDisplay(t *testing.T) {
 
 			app.Get("/test", EchoHandler(jwtService, bodyService))
 
-			req := httptest.NewRequest("GET", "/test", nil)
+			req := httptest.NewRequest("GET", "/test", http.NoBody)
 			req.Header.Set("Accept", "application/json")
 
 			resp, err := app.Test(req, -1)
 			if err != nil {
 				t.Fatalf("Failed to send request: %v", err)
 			}
+			defer resp.Body.Close()
 
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -310,7 +314,7 @@ func TestProxyHeaders(t *testing.T) {
 
 			app.Get("/test", EchoHandler(jwtService, bodyService))
 
-			req := httptest.NewRequest("GET", "/test", nil)
+			req := httptest.NewRequest("GET", "/test", http.NoBody)
 			req.Header.Set("Accept", "application/json")
 			if tt.xForwardedFor != "" {
 				req.Header.Set("X-Forwarded-For", tt.xForwardedFor)
@@ -323,6 +327,7 @@ func TestProxyHeaders(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to send request: %v", err)
 			}
+			defer resp.Body.Close()
 
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
@@ -399,7 +404,7 @@ func TestCustomStatusCodesEdgeCases(t *testing.T) {
 
 			app.Get("/test", EchoHandler(jwtService, bodyService))
 
-			req := httptest.NewRequest("GET", "/test", nil)
+			req := httptest.NewRequest("GET", "/test", http.NoBody)
 			req.Header.Set("Accept", "application/json")
 			if tt.statusHeader != "" {
 				req.Header.Set("x-set-response-status-code", tt.statusHeader)
@@ -409,6 +414,7 @@ func TestCustomStatusCodesEdgeCases(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to send request: %v", err)
 			}
+			defer resp.Body.Close()
 
 			if resp.StatusCode != tt.expectedStatus {
 				t.Errorf("Expected status %d, got %d", tt.expectedStatus, resp.StatusCode)
@@ -447,7 +453,7 @@ func TestHeadRequestCustomStatus(t *testing.T) {
 
 			app.Head("/test", EchoHandlerHead())
 
-			req := httptest.NewRequest("HEAD", "/test", nil)
+			req := httptest.NewRequest("HEAD", "/test", http.NoBody)
 			if tt.statusHeader != "" {
 				req.Header.Set("x-set-response-status-code", tt.statusHeader)
 			}
@@ -456,6 +462,7 @@ func TestHeadRequestCustomStatus(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to send request: %v", err)
 			}
+			defer resp.Body.Close()
 
 			if resp.StatusCode != tt.expectedStatus {
 				t.Errorf("Expected status %d, got %d", tt.expectedStatus, resp.StatusCode)
@@ -472,7 +479,7 @@ func TestMultipleCookies(t *testing.T) {
 
 	app.Get("/test", EchoHandler(jwtService, bodyService))
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequest("GET", "/test", http.NoBody)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Cookie", "session_id=abc123; user_token=xyz789; preferences=theme:dark; lang=en")
 
@@ -480,6 +487,7 @@ func TestMultipleCookies(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to send request: %v", err)
 	}
+	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

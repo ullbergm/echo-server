@@ -125,11 +125,11 @@ func TestGetOrGenerateCertificate_LoadFromFiles(t *testing.T) {
 	}
 
 	// Write certificate and key to files
-	if err := os.WriteFile(certFile, service.certPEM, 0644); err != nil {
-		t.Fatalf("Failed to write cert file: %v", err)
+	if writeErr := os.WriteFile(certFile, service.certPEM, 0o644); writeErr != nil {
+		t.Fatalf("Failed to write cert file: %v", writeErr)
 	}
-	if err := os.WriteFile(keyFile, service.keyPEM, 0600); err != nil {
-		t.Fatalf("Failed to write key file: %v", err)
+	if writeErr := os.WriteFile(keyFile, service.keyPEM, 0o600); writeErr != nil {
+		t.Fatalf("Failed to write key file: %v", writeErr)
 	}
 
 	// Create new service and load from files
@@ -159,7 +159,7 @@ func TestParseCertificate(t *testing.T) {
 		t.Fatalf("Failed to generate certificate: %v", err)
 	}
 
-	x509Cert, err := ParseCertificate(cert)
+	x509Cert, err := ParseCertificate(&cert)
 	if err != nil {
 		t.Fatalf("Failed to parse certificate: %v", err)
 	}
@@ -178,7 +178,7 @@ func TestParseCertificate(t *testing.T) {
 func TestParseCertificate_EmptyCertificate(t *testing.T) {
 	emptyCert := tls.Certificate{}
 
-	_, err := ParseCertificate(emptyCert)
+	_, err := ParseCertificate(&emptyCert)
 	if err == nil {
 		t.Error("Expected error when parsing empty certificate")
 	}
@@ -191,10 +191,10 @@ func TestGetOrGenerateCertificate_InvalidFiles(t *testing.T) {
 	keyFile := filepath.Join(tmpDir, "invalid.key")
 
 	// Write invalid data
-	if err := os.WriteFile(certFile, []byte("invalid cert data"), 0644); err != nil {
+	if err := os.WriteFile(certFile, []byte("invalid cert data"), 0o644); err != nil {
 		t.Fatalf("Failed to write cert file: %v", err)
 	}
-	if err := os.WriteFile(keyFile, []byte("invalid key data"), 0600); err != nil {
+	if err := os.WriteFile(keyFile, []byte("invalid key data"), 0o600); err != nil {
 		t.Fatalf("Failed to write key file: %v", err)
 	}
 

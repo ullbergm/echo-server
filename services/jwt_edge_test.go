@@ -13,8 +13,8 @@ func TestMalformedJWTTokens(t *testing.T) {
 	tests := []struct {
 		name          string
 		token         string
-		expectDecoded bool
 		description   string
+		expectDecoded bool
 	}{
 		{
 			name:          "token with only one part",

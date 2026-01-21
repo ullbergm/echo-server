@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -15,7 +16,7 @@ func BenchmarkEchoHandler_JSON(b *testing.B) {
 	bodyService := services.NewBodyService()
 	app.Get("/test", EchoHandler(jwtService, bodyService))
 
-	req := httptest.NewRequest("GET", "/test?param=value", nil)
+	req := httptest.NewRequest("GET", "/test?param=value", http.NoBody)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("X-Custom-Header", "test-value")
 
@@ -34,7 +35,7 @@ func BenchmarkEchoHandler_HTML(b *testing.B) {
 	bodyService := services.NewBodyService()
 	app.Get("/test", EchoHandler(jwtService, bodyService))
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequest("GET", "/test", http.NoBody)
 	req.Header.Set("Accept", "text/html")
 
 	b.ResetTimer()
@@ -55,7 +56,7 @@ func BenchmarkEchoHandler_WithJWT(b *testing.B) {
 	// Valid JWT token (header.payload.signature)
 	token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequest("GET", "/test", http.NoBody)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", "Bearer "+token)
 
@@ -94,7 +95,7 @@ func BenchmarkEchoHandler_CustomStatus(b *testing.B) {
 	bodyService := services.NewBodyService()
 	app.Get("/test", EchoHandler(jwtService, bodyService))
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequest("GET", "/test", http.NoBody)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-set-response-status-code", "201")
 

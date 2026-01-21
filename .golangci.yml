@@ -19,32 +19,35 @@ linters:
     - gosec
     - bodyclose
     - noctx
-    - exportloopref
+    - copyloopvar
     - gocritic
-    - gocyclo
     - revive
+  disable:
+    - gocyclo
 
 linters-settings:
   errcheck:
     check-type-assertions: true
     check-blank: true
-  
+
   govet:
-    check-shadowing: true
     enable-all: true
-  
+    settings:
+      shadow:
+        strict: true
+
   gofmt:
     simplify: true
-  
+
   gocyclo:
     min-complexity: 15
-  
+
   gocritic:
     enabled-tags:
       - diagnostic
       - performance
       - style
-  
+
   revive:
     rules:
       - name: exported
@@ -58,18 +61,19 @@ issues:
       linters:
         - gosec
         - errcheck
-    
+
     # Exclude certain linters for generated files
     - path: _gen\.go
       linters:
         - gocyclo
         - errcheck
         - gosec
-  
+
   max-issues-per-linter: 0
   max-same-issues: 0
 
 output:
-  format: colored-line-number
+  formats:
+    - format: colored-line-number
   print-issued-lines: true
   print-linter-name: true

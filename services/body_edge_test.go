@@ -244,19 +244,19 @@ func TestBodyService_FormDataWithSpecialCharacters(t *testing.T) {
 	}
 
 	// Verify URL decoding worked
-	if email, ok := contentMap["email"].(string); ok {
+	if email, emailOk := contentMap["email"].(string); emailOk {
 		if email != "john+test@example.com" {
 			t.Errorf("Expected email 'john+test@example.com', got %s", email)
 		}
 	}
 
-	if name, ok := contentMap["name"].(string); ok {
+	if name, nameOk := contentMap["name"].(string); nameOk {
 		if name != "John O'Brien" {
 			t.Errorf("Expected name 'John O'Brien', got %s", name)
 		}
 	}
 
-	if password, ok := contentMap["password"].(string); ok {
+	if password, passOk := contentMap["password"].(string); passOk {
 		if password != "p@ssw&rd!" {
 			t.Errorf("Expected password 'p@ssw&rd!', got %s", password)
 		}
@@ -309,11 +309,11 @@ func TestBodyService_NestedJSON(t *testing.T) {
 	}
 
 	// Verify nested structure exists
-	if level1, ok := contentMap["level1"].(map[string]interface{}); ok {
-		if level2, ok := level1["level2"].(map[string]interface{}); ok {
-			if level3, ok := level2["level3"].(map[string]interface{}); ok {
-				if level4, ok := level3["level4"].(map[string]interface{}); ok {
-					if value, ok := level4["value"].(string); !ok || value != "deep" {
+	if level1, ok1 := contentMap["level1"].(map[string]interface{}); ok1 {
+		if level2, ok2 := level1["level2"].(map[string]interface{}); ok2 {
+			if level3, ok3 := level2["level3"].(map[string]interface{}); ok3 {
+				if level4, ok4 := level3["level4"].(map[string]interface{}); ok4 {
+					if value, ok5 := level4["value"].(string); !ok5 || value != "deep" {
 						t.Error("Failed to parse deeply nested JSON correctly")
 					}
 				}
@@ -338,7 +338,7 @@ func TestBodyService_UTF8Content(t *testing.T) {
 		t.Fatal("Expected content to be a map")
 	}
 
-	if message, ok := contentMap["message"].(string); ok {
+	if message, msgOk := contentMap["message"].(string); msgOk {
 		if !strings.Contains(message, "世界") {
 			t.Error("Expected UTF-8 Chinese characters to be preserved")
 		}

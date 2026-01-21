@@ -67,10 +67,10 @@ func TestExtractAndDecodeJWTs(t *testing.T) {
 	validToken := headerB64 + "." + payloadB64 + "." + signature
 
 	tests := []struct {
-		name          string
 		headers       map[string]string
-		expectedCount int
+		name          string
 		expectedName  string
+		expectedCount int
 	}{
 		{
 			name:          "empty headers",
