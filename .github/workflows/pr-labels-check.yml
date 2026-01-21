@@ -125,10 +125,6 @@ jobs:
               // All checks passed - update or remove the warning comment
               if (botComment) {
                 const successMessage = '## ✅ PR Label Validation Passed\n\n' +
-                  '### Current labels:\n' +
-                  prLabels.map(l => `- ${l}`).join('\n') + '\n\n' +
-                  '**Type labels:** ' + typeLabels.join(', ') + '\n' +
-                  '**Area labels:** ' + areaLabels.join(', ') + '\n\n' +
                   '_All label requirements are met!_';
                 
                 await github.rest.issues.updateComment({

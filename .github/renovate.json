@@ -9,19 +9,31 @@
       "matchDatasources": [
         "go"
       ],
-      "groupName": "Go dependencies"
+      "groupName": "Go dependencies",
+      "labels": [
+        "type/dependencies",
+        "area/services"
+      ]
     },
     {
       "matchDatasources": [
         "docker"
       ],
-      "groupName": "Docker dependencies"
+      "groupName": "Docker dependencies",
+      "labels": [
+        "type/dependencies",
+        "area/docker"
+      ]
     },
     {
       "matchManagers": [
         "github-actions"
       ],
-      "groupName": "GitHub Actions"
+      "groupName": "GitHub Actions",
+      "labels": [
+        "type/dependencies",
+        "area/github"
+      ]
     },
     {
       "matchManagers": [
@@ -32,9 +44,6 @@
   ],
   "postUpdateOptions": [
     "gomodTidy"
-  ],
-  "labels": [
-    "dependencies"
   ],
   "automerge": false,
   "prConcurrentLimit": 5,
