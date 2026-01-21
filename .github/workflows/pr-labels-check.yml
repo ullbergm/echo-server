@@ -58,12 +58,12 @@ jobs:
             
             if (!hasTypeLabel) {
               errors.push(`❌ **Missing required type label**`);
-              errors.push(`   Please add one of: ${typeLabels.join(', ')}`);
+              errors.push(`   Please add a label starting with \`type/\` (e.g., type/bug, type/enhancement, type/documentation)`);
             }
             
             if (!hasAreaLabel) {
               errors.push(`❌ **Missing required area label**`);
-              errors.push(`   Please add one of: ${areaLabels.join(', ')}`);
+              errors.push(`   Please add a label starting with \`area/\` (e.g., area/handlers, area/models, area/services)`);
             }
             
             // If there are errors, fail the check and add a comment
@@ -72,15 +72,15 @@ jobs:
                 errors.join('\n') + '\n\n' +
                 '### Current labels:\n' +
                 (prLabels.length > 0 ? prLabels.map(l => `- ${l}`).join('\n') : '*No labels*') + '\n\n' +
-            if (!hasTypeLabel) {
-              errors.push(`❌ **Missing required type label**`);
-              errors.push(`   Please add a label starting with \`type/\` (e.g., type/bug, type/enhancement, type/documentation)`);
-            }
-            
-            if (!hasAreaLabel) {
-              errors.push(`❌ **Missing required area label**`);
-              errors.push(`   Please add a label starting with \`area/\` (e.g., area/handlers, area/models, area/services)`);
-            }   repo: context.repo.repo,
+                '### Requirements:\n' +
+                '- ✅ Must have at least one `type/*` label\n' +
+                '- ✅ Must have at least one `area/*` label\n' +
+                '- ❌ Must NOT have special labels (`needs-review`, `needs-testing`, `blocked`, `wip`, `invalid`, `wontfix`, `duplicate`)';
+              
+              // Add or update comment
+              const comments = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
                 issue_number: context.issue.number,
               });
               
@@ -108,7 +108,7 @@ jobs:
               core.setFailed(errors.join('\n'));
             } else {
               core.info(`✅ All label requirements met!`);
-              core.info(`   Type labels: ${prLabels.filter(l => l.startsWith('type/')).join(', ')}`);
-              core.info(`   Area labels: ${prLabels.filter(l => l.startsWith('area/')).join(', ')}`);
+              core.info(`   Type labels: ${typeLabels.join(', ')}`);
+              core.info(`   Area labels: ${areaLabels.join(', ')}`);
             }
 
