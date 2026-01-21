@@ -1,0 +1,215 @@
+version: "3"
+
+vars:
+  VERSION:
+    sh: git describe --tags --abbrev=0 2>/dev/null || echo "dev"
+  LDFLAGS: -ldflags "-X main.Version={{.VERSION}}"
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+    silent: true
+
+  build:
+    desc: Build the application
+    cmds:
+      - echo "Building echo-server version {{.VERSION}}..."
+      - go build {{.LDFLAGS}} -o echo-server
+
+  build-optimized:
+    desc: Build with optimizations (smaller binary)
+    cmds:
+      - echo "Building optimized echo-server version {{.VERSION}}..."
+      - go build {{.LDFLAGS}} -ldflags="-s -w" -o echo-server
+
+  run:
+    desc: Run the application in development mode
+    cmds:
+      - echo "Running echo-server version {{.VERSION}}..."
+      - go run {{.LDFLAGS}} main.go
+
+  dev:
+    desc: Run with hot reload (requires air)
+    cmds:
+      - echo "Starting development server with hot reload..."
+      - go run github.com/air-verse/air@latest
+
+  test:
+    desc: Run all tests
+    cmds:
+      - go test ./...
+
+  test-coverage:
+    desc: Run tests with coverage report
+    cmds:
+      - go test -cover ./...
+
+  test-race:
+    desc: Run tests with race detection
+    cmds:
+      - echo "Running tests with race detection..."
+      - CGO_ENABLED=1 go test -race ./...
+
+  test-verbose:
+    desc: Run tests with verbose output
+    cmds:
+      - echo "Running tests with verbose output..."
+      - go test -v ./...
+
+  coverage:
+    desc: Generate test coverage report
+    cmds:
+      - echo "Generating coverage report..."
+      - go test -coverprofile=coverage.out ./...
+      - go tool cover -html=coverage.out -o coverage.html
+      - echo "Coverage report generated at coverage.html"
+
+  coverage-view:
+    desc: Generate and open coverage report in browser
+    deps:
+      - coverage
+    cmds:
+      - echo "Opening coverage report in browser..."
+      - |
+        if command -v open > /dev/null; then
+          open coverage.html
+        elif command -v xdg-open > /dev/null; then
+          xdg-open coverage.html
+        elif command -v start > /dev/null; then
+          start coverage.html
+        else
+          echo "Please open coverage.html manually"
+        fi
+
+  bench:
+    desc: Run benchmarks
+    cmds:
+      - echo "Running benchmarks..."
+      - go test -bench=. -benchmem ./...
+
+  lint:
+    desc: Run linter
+    cmds:
+      - echo "Running golangci-lint..."
+      - go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run
+
+  lint-fix:
+    desc: Fix linting issues automatically
+    cmds:
+      - echo "Running golangci-lint with fixes..."
+      - go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run --fix
+
+  fmt:
+    desc: Format code
+    cmds:
+      - go fmt ./...
+
+  security:
+    desc: Check for security issues
+    cmds:
+      - echo "Running security checks..."
+      - go run github.com/securego/gosec/v2/cmd/gosec@latest ./...
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -f echo-server echo-server.exe coverage.out coverage.html
+
+  version:
+    desc: Show current version
+    cmds:
+      - echo "{{.VERSION}}"
+    silent: true
+
+  pre-commit:
+    desc: Run all pre-commit checks (fmt, lint, test)
+    deps:
+      - fmt
+      - lint
+      - test
+    cmds:
+      - echo "✓ All pre-commit checks passed!"
+
+  docker-build:
+    desc: Build Docker image
+    cmds:
+      - echo "Building Docker image version {{.VERSION}}..."
+      - docker build -t echo-server:{{.VERSION}} -t echo-server:latest .
+
+  docker-run:
+    desc: Run Docker container for local testing
+    cmds:
+      - echo "Running Docker container..."
+      - docker run -it --rm -p 8080:8080 -p 8443:8443 echo-server:latest
+
+  docker-all:
+    desc: Build and run Docker container
+    deps:
+      - docker-build
+    cmds:
+      - task docker-run
+
+  deps-check:
+    desc: Check dependencies for updates
+    cmds:
+      - echo "Checking for dependency updates..."
+      - go list -u -m all
+
+  deps-update:
+    desc: Update dependencies
+    cmds:
+      - echo "Updating dependencies..."
+      - go get -u ./...
+      - go mod tidy
+
+  deps-verify:
+    desc: Verify dependencies
+    cmds:
+      - echo "Verifying dependencies..."
+      - go mod verify
+
+  ci:
+    desc: Run CI checks (fmt, lint, test, build)
+    deps:
+      - fmt
+      - lint
+      - test
+      - build
+    cmds:
+      - echo "✓ All CI checks passed!"
+
+  install:
+    desc: Install the echo-server binary to $GOPATH/bin
+    cmds:
+      - echo "Installing echo-server version {{.VERSION}}..."
+      - go install {{.LDFLAGS}}
+
+  help:
+    desc: Show detailed help information
+    cmds:
+      - |
+        echo "Echo Server Task Commands"
+        echo "=========================="
+        echo ""
+        echo "Quick Start:"
+        echo "  task run              - Run the server locally"
+        echo "  task dev              - Run with hot reload"
+        echo "  task test             - Run tests"
+        echo "  task build            - Build binary"
+        echo ""
+        echo "Development:"
+        echo "  task test-coverage    - Run tests with coverage"
+        echo "  task test-race        - Run tests with race detection"
+        echo "  task coverage-view    - Generate and open coverage report"
+        echo "  task lint             - Run linter"
+        echo "  task fmt              - Format code"
+        echo ""
+        echo "Docker:"
+        echo "  task docker-build     - Build Docker image"
+        echo "  task docker-run       - Run Docker container"
+        echo "  task docker-all       - Build and run Docker"
+        echo ""
+        echo "For all available commands, run: task --list"
+    silent: true
