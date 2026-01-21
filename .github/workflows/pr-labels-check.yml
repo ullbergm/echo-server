@@ -1,0 +1,129 @@
+name: "PR Labels Check"
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  check-labels:
+    name: Check PR has valid labels
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PR label requirements
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Get PR labels
+            const { data: pullRequest } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+            
+            const prLabels = pullRequest.labels.map(label => label.name);
+            
+            // Define forbidden labels (status and special labels)
+            const forbiddenLabels = [
+              'status/needs-review',
+              'status/needs-testing',
+              'status/blocked',
+              'status/wip',
+              'invalid',
+              'wontfix',
+              'duplicate'
+            ];
+            
+            // Define required label prefixes
+            const typeLabels = [
+              'type/bug',
+              'type/enhancement',
+              'type/documentation',
+              'type/refactor',
+              'type/ci',
+              'type/dependencies'
+            ];
+            
+            const areaLabels = [
+              'area/handlers',
+              'area/models',
+              'area/services',
+              'area/templates',
+              'area/docker',
+              'area/kubernetes'
+            ];
+            
+            // Check for forbidden labels
+            const foundForbiddenLabels = prLabels.filter(label => forbiddenLabels.includes(label));
+            
+            // Check for required labels
+            const hasTypeLabel = prLabels.some(label => typeLabels.includes(label));
+            const hasAreaLabel = prLabels.some(label => areaLabels.includes(label));
+            
+            // Build error messages
+            const errors = [];
+            
+            if (foundForbiddenLabels.length > 0) {
+              errors.push(`❌ **Forbidden labels detected:** ${foundForbiddenLabels.join(', ')}`);
+              errors.push('   These labels should not be used on PRs.');
+            }
+            
+            if (!hasTypeLabel) {
+              errors.push(`❌ **Missing required type label**`);
+              errors.push(`   Please add one of: ${typeLabels.join(', ')}`);
+            }
+            
+            if (!hasAreaLabel) {
+              errors.push(`❌ **Missing required area label**`);
+              errors.push(`   Please add one of: ${areaLabels.join(', ')}`);
+            }
+            
+            // If there are errors, fail the check and add a comment
+            if (errors.length > 0) {
+              const message = '## PR Label Validation Failed\n\n' +
+                errors.join('\n') + '\n\n' +
+                '### Current labels:\n' +
+                (prLabels.length > 0 ? prLabels.map(l => `- ${l}`).join('\n') : '*No labels*') + '\n\n' +
+                '### Requirements:\n' +
+                '- ✅ Must have at least one `type/*` label\n' +
+                '- ✅ Must have at least one `area/*` label\n' +
+                '- ❌ Must NOT have special labels (`needs-review`, `needs-testing`, `blocked`, `wip`, `help wanted`, `invalid`, `wontfix`, `duplicate`)';
+              
+              // Add or update comment
+              const comments = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+              });
+              
+              const botComment = comments.data.find(comment => 
+                comment.user.type === 'Bot' && 
+                comment.body.includes('PR Label Validation')
+              );
+              
+              if (botComment) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: botComment.id,
+                  body: message
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: message
+                });
+              }
+              
+              core.setFailed(errors.join('\n'));
+            } else {
+              core.info(`✅ All label requirements met!`);
+              core.info(`   Type labels: ${prLabels.filter(l => l.startsWith('type/')).join(', ')}`);
+              core.info(`   Area labels: ${prLabels.filter(l => l.startsWith('area/')).join(', ')}`);
+            }
+
