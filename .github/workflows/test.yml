@@ -92,11 +92,10 @@ jobs:
           echo "📁 [Download full coverage report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> coverage-summary.md
 
       - name: Add coverage PR comment
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@331f8f5b4215f0445d3c07b4967662a32a2d3e31 # v2
         if: github.event_name == 'pull_request'
         with:
           header: coverage
-          recreate: true
           path: coverage-summary.md
 
       - name: Build binary

@@ -96,6 +96,5 @@ jobs:
       - name: Post label validation comment
         uses: marocchino/sticky-pull-request-comment@331f8f5b4215f0445d3c07b4967662a32a2d3e31 # v2
         with:
-          header: check-labels
-          recreate: true
+          header: pr-labels
           path: pr-label-validation.md
