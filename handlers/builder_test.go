@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -18,12 +19,13 @@ func TestBuilderHandler(t *testing.T) {
 
 	app.Get("/builder", BuilderHandler())
 
-	req := httptest.NewRequest("GET", "/builder", nil)
+	req := httptest.NewRequest("GET", "/builder", http.NoBody)
 	resp, err := app.Test(req, -1)
 
 	if err != nil {
 		t.Fatalf("Failed to send request: %v", err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != fiber.StatusOK {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
@@ -46,12 +48,13 @@ func TestBuilderHandler_RendersTemplate(t *testing.T) {
 
 	app.Get("/builder", BuilderHandler())
 
-	req := httptest.NewRequest("GET", "/builder", nil)
+	req := httptest.NewRequest("GET", "/builder", http.NoBody)
 	resp, err := app.Test(req, -1)
 
 	if err != nil {
 		t.Fatalf("Failed to send request: %v", err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != fiber.StatusOK {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
