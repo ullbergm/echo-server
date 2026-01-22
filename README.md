@@ -7,6 +7,7 @@ A cloud-native HTTP echo server built with Golang and Fiber that reflects reques
 - **🔄 Request Echo** - See your complete HTTP request (method, path, headers, query params)
 - **📦 Body Echo** - Capture and display request body with Content-Type aware parsing (JSON, XML, form-data, plain text)
 - **🌐 Dual Format** - Beautiful HTML for browsers, clean JSON for APIs  
+- **🎨 Interactive Request Builder** - Modern web UI for building and testing HTTP requests without curl
 - **☸️ Kubernetes Native** - Shows pod metadata via environment variables when running in K8s
 - **🔐 JWT Decoder** - Automatically decodes JWT tokens from your requests
 - **🔒 TLS/HTTPS Support** - Optional HTTPS with automatic self-signed certificate generation or custom certificates
@@ -41,6 +42,8 @@ docker run -p 8080:8080 -p 8443:8443 \
 ```
 
 Then open <http://localhost:8080> (or <https://localhost:8443>) in your browser!
+
+**Try the Interactive Request Builder:** Visit http://localhost:8080/builder for a modern web UI to build and test HTTP requests visually.
 
 ### Run Locally
 
@@ -294,10 +297,36 @@ When `TLS_ENABLED=true`:
 ## API Endpoints
 
 - `/*` - Echo endpoint (all HTTP methods: GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD)
+- `/builder` - Interactive web UI for building and testing HTTP requests
 - `/monitor` - Monitor dashboard with real-time server metrics (CPU, RAM, connections)
 - `/healthz/live` - Liveness probe
 - `/healthz/ready` - Readiness probe
 - `/metrics` - Prometheus metrics
+
+### Interactive Request Builder
+
+Access the modern web UI at `/builder` to visually build and test HTTP requests without using curl or other tools.
+
+**Features:**
+- 🎨 Modern, responsive interface with dark mode support
+- 🔧 Visual request builder with all HTTP methods
+- 🛤️ Simple path-based requests (no need for full URLs)
+- 📋 Header management with key-value pairs
+- 📝 Request body editor for POST/PUT/PATCH/DELETE
+- 🎯 Tabbed response viewer (Body, Headers)
+- 🎨 JSON syntax highlighting
+- 📊 Response metrics (status, time, size)
+- 📜 Request history with localStorage persistence
+- 🚀 One-click request sending
+
+**Usage:**
+
+Open your browser and navigate to:
+```
+http://localhost:8080/builder
+```
+
+Build your request using the visual interface - simply enter a path like `/api/test` (no need for full URLs) and click "Send Request" to see the response with full details including status, headers, timing, and formatted body.
 
 ### Response Compression
 
