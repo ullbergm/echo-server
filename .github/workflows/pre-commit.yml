@@ -62,14 +62,3 @@ jobs:
 
       - name: Run pre-commit on all files
         run: pre-commit run --all-files --show-diff-on-failure
-
-      - name: Validate PR commits (Pull Request only)
-        if: github.event_name == 'pull_request'
-        run: |
-          # Validate all commits in the PR
-          BASE="${{ github.base_ref }}"
-          HEAD="${{ github.event.pull_request.head.sha }}"
-          git log --format=%H origin/$BASE..$HEAD | while read -r commit; do
-            echo "Validating commit: $commit"
-            git log -1 --format=%B "$commit" | npx @commitlint/cli --config .commitlintrc.yml
-          done

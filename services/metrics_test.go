@@ -3,6 +3,7 @@ package services
 import (
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -10,8 +11,22 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// Use a single metrics service instance to avoid duplicate registry issues across all tests
+var (
+	sharedTestMetricsService     *MetricsService
+	sharedTestMetricsServiceOnce sync.Once
+)
+
+func getTestMetricsService() *MetricsService {
+	sharedTestMetricsServiceOnce.Do(func() {
+		sharedTestMetricsService = NewMetricsService()
+	})
+	return sharedTestMetricsService
+}
+
 func TestNewMetricsService(t *testing.T) {
-	service := NewMetricsService()
+	// Use the shared test instance to avoid duplicate registration
+	service := getTestMetricsService()
 
 	if service == nil {
 		t.Fatal("Expected non-nil MetricsService")
