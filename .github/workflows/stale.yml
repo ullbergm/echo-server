@@ -18,7 +18,7 @@ jobs:
       - uses: actions/stale@v10
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          
+
           # Issue configuration
           stale-issue-message: 'This issue has been automatically marked as stale because it has not had recent activity. It will be closed if no further activity occurs. Thank you for your contributions.'
           close-issue-message: 'This issue was automatically closed due to inactivity. If you believe this is still relevant, please reopen it with updated information.'
@@ -26,7 +26,7 @@ jobs:
           days-before-issue-close: -1
           stale-issue-label: 'status/stale'
           exempt-issue-labels: 'type/bug,priority/critical,priority/high,status/blocked,status/needs-review,automated-issue'
-          
+
           # Pull request configuration
           stale-pr-message: 'This pull request has been automatically marked as stale because it has not had recent activity. It will be closed if no further activity occurs. Thank you for your contributions.'
           close-pr-message: 'This pull request was automatically closed due to inactivity. If you would like to continue working on this, please reopen it with updated changes.'
@@ -34,7 +34,7 @@ jobs:
           days-before-pr-close: -1
           stale-pr-label: 'status/stale'
           exempt-pr-labels: 'priority/critical,priority/high,status/wip,status/blocked,status/needs-review,automated-issue'
-          
+
           # General configuration
           operations-per-run: 30
           remove-stale-when-updated: true

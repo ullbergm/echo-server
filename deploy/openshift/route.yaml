@@ -10,16 +10,16 @@ metadata:
     app: echo-server
 spec:
   # host: echo.apps.example.com  # Uncomment to specify a custom hostname
-  
+
   to:
     kind: Service
     name: echo-server
     weight: 100
   port:
-    targetPort: http  # Target the HTTP port (8080)
+    targetPort: http # Target the HTTP port (8080)
   tls:
     termination: edge
-    insecureEdgeTerminationPolicy: Redirect  # Redirect HTTP to HTTPS
+    insecureEdgeTerminationPolicy: Redirect # Redirect HTTP to HTTPS
 
 ---
 # Passthrough Termination Route
@@ -33,7 +33,7 @@ spec:
 #     app: echo-server
 # spec:
 #   # host: echo-passthrough.apps.example.com
-#   
+#
 #   to:
 #     kind: Service
 #     name: echo-server
@@ -56,7 +56,7 @@ spec:
 #     app: echo-server
 # spec:
 #   # host: echo-reencrypt.apps.example.com
-#   
+#
 #   to:
 #     kind: Service
 #     name: echo-server

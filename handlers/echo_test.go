@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
@@ -21,7 +22,7 @@ func TestEchoHandler_JSONResponse(t *testing.T) {
 
 	app.Get("/test", EchoHandler(jwtService, bodyService))
 
-	req := httptest.NewRequest("GET", "/test?param=value", nil)
+	req := httptest.NewRequest("GET", "/test?param=value", http.NoBody)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("X-Custom-Header", "custom-value")
 
@@ -29,6 +30,7 @@ func TestEchoHandler_JSONResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to send request: %v", err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != fiber.StatusOK {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
@@ -79,15 +81,16 @@ func TestEchoHandler_HTMLResponse(t *testing.T) {
 
 	app.Get("/test", EchoHandler(jwtService, bodyService))
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequest("GET", "/test", http.NoBody)
 	req.Header.Set("Accept", "text/html")
 
-	_, err := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
 	if err != nil {
 		// Expected to fail without template engine
 		// This test validates the handler attempts to render HTML
 		return
 	}
+	resp.Body.Close()
 
 	// Note: Without actual template, this will fail, but we can test the handler is called
 	// For a production test, we'd need to set up the template engine
@@ -139,7 +142,7 @@ func TestEchoHandler_CustomStatusCode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest("GET", "/test", nil)
+			req := httptest.NewRequest("GET", "/test", http.NoBody)
 			req.Header.Set("Accept", "application/json")
 			req.Header.Set("x-set-response-status-code", tt.statusHeader)
 
@@ -147,6 +150,7 @@ func TestEchoHandler_CustomStatusCode(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to send request: %v", err)
 			}
+			defer resp.Body.Close()
 
 			if resp.StatusCode != tt.expectedStatus {
 				t.Errorf("Expected status %d, got %d", tt.expectedStatus, resp.StatusCode)
@@ -173,7 +177,7 @@ func TestEchoHandler_WithJWTToken(t *testing.T) {
 
 	app.Get("/test", EchoHandler(jwtService, bodyService))
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequest("GET", "/test", http.NoBody)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", "Bearer "+token)
 
@@ -181,6 +185,7 @@ func TestEchoHandler_WithJWTToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to send request: %v", err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != fiber.StatusOK {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
@@ -236,7 +241,7 @@ func TestEchoHandlerHead(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest("HEAD", "/test", nil)
+			req := httptest.NewRequest("HEAD", "/test", http.NoBody)
 			if tt.acceptHeader != "" {
 				req.Header.Set("Accept", tt.acceptHeader)
 			}
@@ -245,6 +250,7 @@ func TestEchoHandlerHead(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to send request: %v", err)
 			}
+			defer resp.Body.Close()
 
 			if resp.StatusCode != fiber.StatusOK {
 				t.Errorf("Expected status 200, got %d", resp.StatusCode)
@@ -282,20 +288,21 @@ func TestBuildHeadersMap(t *testing.T) {
 		return c.SendStatus(fiber.StatusOK)
 	})
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequest("GET", "/test", http.NoBody)
 	req.Header.Set("X-Test-Header", "test-value")
 	req.Header.Set("Content-Type", "application/json")
 
-	_, err := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
 	if err != nil {
 		t.Fatalf("Failed to send request: %v", err)
 	}
+	resp.Body.Close()
 }
 
 func TestGetKubernetesInfo(t *testing.T) {
 	tests := []struct {
-		name        string
 		envVars     map[string]string
+		name        string
 		expectNil   bool
 		expectLabel bool
 	}{
@@ -398,24 +405,25 @@ func TestGetRemoteAddress(t *testing.T) {
 				return c.SendStatus(fiber.StatusOK)
 			})
 
-			req := httptest.NewRequest("GET", "/test", nil)
+			req := httptest.NewRequest("GET", "/test", http.NoBody)
 			for key, val := range tt.headers {
 				req.Header.Set(key, val)
 			}
 
-			_, err := app.Test(req, -1)
+			resp, err := app.Test(req, -1)
 			if err != nil {
 				t.Fatalf("Failed to send request: %v", err)
 			}
+			defer resp.Body.Close()
 		})
 	}
 }
 
 func TestGetEnvironmentVariables(t *testing.T) {
 	tests := []struct {
+		k8sEnvs        map[string]string
 		name           string
 		displayEnv     string
-		k8sEnvs        map[string]string
 		expectedCount  int
 		expectHostname bool
 		expectK8sVars  bool
@@ -457,8 +465,12 @@ func TestGetEnvironmentVariables(t *testing.T) {
 				if err := os.Setenv(key, val); err != nil {
 					t.Fatalf("Failed to set env var %s: %v", key, err)
 				}
-				defer func(k string) { _ = os.Unsetenv(k) }(key)
 			}
+			defer func() {
+				for key := range tt.k8sEnvs {
+					_ = os.Unsetenv(key)
+				}
+			}()
 
 			envVars := getEnvironmentVariables()
 
@@ -499,6 +511,7 @@ func TestEchoHandler_PostWithJSONBody(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to send request: %v", err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != fiber.StatusOK {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
@@ -546,7 +559,7 @@ func TestEchoHandler_PostWithFormData(t *testing.T) {
 
 	app.Post("/test", EchoHandler(jwtService, bodyService))
 
-	formData := "username=johndoe&password=secret123&remember=true"
+	formData := "username=johndoe&password=secret123&remember=true" // pragma: allowlist secret
 	req := httptest.NewRequest("POST", "/test", strings.NewReader(formData))
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -555,6 +568,7 @@ func TestEchoHandler_PostWithFormData(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to send request: %v", err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != fiber.StatusOK {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
@@ -603,6 +617,7 @@ func TestEchoHandler_PostWithPlainText(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to send request: %v", err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != fiber.StatusOK {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
@@ -651,6 +666,7 @@ func TestEchoHandler_PutWithBody(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to send request: %v", err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != fiber.StatusOK {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
@@ -680,13 +696,14 @@ func TestEchoHandler_GetWithoutBody(t *testing.T) {
 
 	app.Get("/test", EchoHandler(jwtService, bodyService))
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequest("GET", "/test", http.NoBody)
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := app.Test(req, -1)
 	if err != nil {
 		t.Fatalf("Failed to send request: %v", err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != fiber.StatusOK {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
@@ -716,7 +733,7 @@ func TestParseCookies(t *testing.T) {
 
 	app.Get("/test", EchoHandler(jwtService, bodyService))
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req := httptest.NewRequest("GET", "/test", http.NoBody)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Cookie", "session=abc123; user=john")
 
@@ -724,6 +741,7 @@ func TestParseCookies(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to send request: %v", err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != fiber.StatusOK {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
@@ -770,11 +788,11 @@ func TestSetResponseCookies(t *testing.T) {
 	tests := []struct {
 		name             string
 		setCookieHeader  string
-		expectCookie     bool
 		expectedName     string
 		expectedValue    string
-		checkAttributes  bool
 		expectedPath     string
+		expectCookie     bool
+		checkAttributes  bool
 		expectedHttpOnly bool
 		expectedSecure   bool
 	}{
@@ -818,7 +836,7 @@ func TestSetResponseCookies(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest("GET", "/test", nil)
+			req := httptest.NewRequest("GET", "/test", http.NoBody)
 			req.Header.Set("Accept", "application/json")
 			req.Header.Set("x-set-cookie", tt.setCookieHeader)
 
@@ -826,6 +844,7 @@ func TestSetResponseCookies(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to send request: %v", err)
 			}
+			defer resp.Body.Close()
 
 			if resp.StatusCode != fiber.StatusOK {
 				t.Errorf("Expected status 200, got %d", resp.StatusCode)
@@ -868,15 +887,15 @@ func TestParseSetCookieHeader(t *testing.T) {
 	tests := []struct {
 		name           string
 		headerValue    string
-		expectNil      bool
 		expectedName   string
 		expectedValue  string
 		expectedPath   string
 		expectedDomain string
+		sameSite       string
 		expectedMaxAge int
+		expectNil      bool
 		httpOnly       bool
 		secure         bool
-		sameSite       string
 	}{
 		{
 			name:          "simple cookie",

@@ -19,20 +19,20 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           issue-message: |
-            👋 Thanks for opening your first issue in the echo-server repository! 
-            
+            👋 Thanks for opening your first issue in the echo-server repository!
+
             I appreciate your contribution and will review your issue as soon as possible.
-            
+
             Please make sure you've provided all the necessary information to help us understand and reproduce the issue.
           pr-message: |
             🎉 Congratulations on your first pull request to the echo-server repository!
-            
+
             Thank you for taking the time to contribute! We really appreciate your effort.
-            
+
             A maintainer will review your pull request soon. In the meantime, please make sure:
             - [ ] Your code follows our coding conventions
             - [ ] You've run `gofmt -w .` to format the code
             - [ ] All tests pass with `go test ./...`
             - [ ] You've updated documentation if needed
-            
+
             Welcome to the community! 🚀

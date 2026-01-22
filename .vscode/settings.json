@@ -1,0 +1,170 @@
+{
+  // ========================================
+  // Go Language Settings
+  // ========================================
+  "go.useLanguageServer": true,
+  "go.lintTool": "golangci-lint",
+  "go.lintOnSave": "package",
+  "go.formatTool": "gofmt",
+  "go.testOnSave": false,
+  "go.coverOnSave": false,
+  "go.coverageDecorator": {
+    "type": "highlight",
+    "coveredHighlightColor": "rgba(64,128,64,0.3)",
+    "uncoveredHighlightColor": "rgba(128,64,64,0.3)"
+  },
+  "go.testFlags": [
+    "-v"
+  ],
+  "go.buildOnSave": "off",
+  "go.vetOnSave": "package",
+  "gopls": {
+    "ui.semanticTokens": true,
+    "formatting.gofumpt": false
+  },
+  // ========================================
+  // Editor Settings
+  // ========================================
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": false,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "explicit"
+  },
+  "editor.rulers": [
+    100,
+    120
+  ],
+  "editor.tabSize": 4,
+  "editor.insertSpaces": false,
+  "editor.detectIndentation": true,
+  "editor.renderWhitespace": "boundary",
+  "editor.bracketPairColorization.enabled": true,
+  "editor.guides.bracketPairs": true,
+  // ========================================
+  // File Settings
+  // ========================================
+  "files.eol": "\n",
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+  "files.exclude": {
+    "**/.git": true,
+    "**/tmp": true,
+    "**/coverage.out": true,
+    "**/coverage.html": true,
+    "**/echo-server": true
+  },
+  "files.watcherExclude": {
+    "**/tmp/**": true,
+    "**/vendor/**": true
+  },
+  "files.associations": {
+    "*.html": "html",
+    "Taskfile.yml": "yaml",
+    "Dockerfile": "dockerfile"
+  },
+  // ========================================
+  // Search Settings
+  // ========================================
+  "search.exclude": {
+    "**/tmp": true,
+    "**/vendor": true,
+    "**/coverage.*": true,
+    "**/echo-server": true
+  },
+  // ========================================
+  // Go-specific Editor Overrides
+  // ========================================
+  "[go]": {
+    "editor.defaultFormatter": "golang.go",
+    "editor.insertSpaces": false,
+    "editor.tabSize": 4,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+  "[go.mod]": {
+    "editor.defaultFormatter": "golang.go"
+  },
+  // ========================================
+  // YAML Settings
+  // ========================================
+  "[yaml]": {
+    "editor.defaultFormatter": "redhat.vscode-yaml",
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2,
+    "editor.autoIndent": "keep"
+  },
+  "yaml.schemas": {
+    "https://json.schemastore.org/github-workflow.json": ".github/workflows/*.yml",
+    "https://taskfile.dev/schema.json": "Taskfile.yml"
+  },
+  // ========================================
+  // JSON Settings
+  // ========================================
+  "[json]": {
+    "editor.defaultFormatter": "vscode.json-language-features",
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "vscode.json-language-features",
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2
+  },
+  // ========================================
+  // Markdown Settings
+  // ========================================
+  "[markdown]": {
+    "editor.defaultFormatter": "DavidAnson.vscode-markdownlint",
+    "editor.wordWrap": "on",
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2,
+    "files.trimTrailingWhitespace": false
+  },
+  "markdownlint.config": {
+    "MD013": false,
+    "MD033": false,
+    "MD041": false
+  },
+  // ========================================
+  // Docker Settings
+  // ========================================
+  "[dockerfile]": {
+    "editor.defaultFormatter": "ms-azuretools.vscode-docker"
+  },
+  // ========================================
+  // Terminal Settings (Cross-platform)
+  // ========================================
+  "terminal.integrated.inheritEnv": true,
+  "terminal.integrated.defaultProfile.windows": "Git Bash",
+  "terminal.integrated.profiles.windows": {
+    "Git Bash": {
+      "path": "C:\\Program Files\\Git\\bin\\bash.exe",
+      "icon": "terminal-bash",
+      "overrideName": true
+    },
+    "PowerShell": {
+      "source": "PowerShell",
+      "icon": "terminal-powershell"
+    }
+  },
+  // ========================================
+  // Task Runner Settings
+  // ========================================
+  "task.autoDetect": "on",
+  "task.problemMatchers.neverPrompt": {
+    "shell": true
+  },
+  // ========================================
+  // Git Settings
+  // ========================================
+  "git.enableSmartCommit": true,
+  "git.confirmSync": false,
+  "git.autofetch": true,
+  // ========================================
+  // Testing Settings
+  // ========================================
+  "testing.automaticallyOpenPeekView": "failureVisible",
+  "testing.gutterEnabled": true
+}

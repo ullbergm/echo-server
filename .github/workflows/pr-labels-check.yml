@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check PR label requirements
+        id: check
         uses: actions/github-script@v8
         with:
           script: |
@@ -23,9 +24,9 @@ jobs:
               repo: context.repo.repo,
               pull_number: context.issue.number,
             });
-            
+
             const prLabels = pullRequest.labels.map(label => label.name);
-            
+
             // Define forbidden labels (status and special labels)
             const forbiddenLabels = [
               'status/needs-review',
@@ -36,66 +37,40 @@ jobs:
               'wontfix',
               'duplicate'
             ];
-            
+
             // Check for forbidden labels
             const foundForbiddenLabels = prLabels.filter(label => forbiddenLabels.includes(label));
-            
+
             // Check for required label prefixes using wildcards
             const hasTypeLabel = prLabels.some(label => label.startsWith('type/'));
             const hasAreaLabel = prLabels.some(label => label.startsWith('area/'));
-            
+
             // Get actual type and area labels for display
             const typeLabels = prLabels.filter(l => l.startsWith('type/'));
             const areaLabels = prLabels.filter(l => l.startsWith('area/'));
-            
+
             // Build error messages
             const errors = [];
-            
+
             if (foundForbiddenLabels.length > 0) {
               errors.push(`❌ **Forbidden labels detected:** ${foundForbiddenLabels.join(', ')}`);
               errors.push('   These labels should not be used on PRs.');
             }
-            
+
             if (!hasTypeLabel) {
               errors.push(`❌ **Missing required type label**`);
               errors.push(`   Please add a label starting with \`type/\` (e.g., type/bug, type/enhancement, type/documentation)`);
             }
-            
+
             if (!hasAreaLabel) {
               errors.push(`❌ **Missing required area label**`);
               errors.push(`   Please add a label starting with \`area/\` (e.g., area/handlers, area/models, area/services)`);
             }
-            
-            // Get existing bot comments
-            const comments = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-            
-            const botComments = comments.data.filter(comment => 
-              comment.user.type === 'Bot' && 
-              comment.body.includes('PR Label Validation')
-            );
-            
-            // Remove duplicate bot comments (keep only the first one)
-            if (botComments.length > 1) {
-              core.info(`Found ${botComments.length} bot comments, removing duplicates...`);
-              for (let i = 1; i < botComments.length; i++) {
-                await github.rest.issues.deleteComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  comment_id: botComments[i].id,
-                });
-                core.info(`Deleted duplicate comment ${botComments[i].id}`);
-              }
-            }
-            
-            const botComment = botComments[0]; // Use the first (oldest) comment
-            
-            // If there are errors, fail the check and add/update comment
+
+            // Generate message
+            let message;
             if (errors.length > 0) {
-              const message = '## PR Label Validation Failed\n\n' +
+              message = '## PR Label Validation Failed\n\n' +
                 errors.join('\n') + '\n\n' +
                 '### Current labels:\n' +
                 (prLabels.length > 0 ? prLabels.map(l => `- ${l}`).join('\n') : '*No labels*') + '\n\n' +
@@ -103,40 +78,23 @@ jobs:
                 '- ✅ Must have at least one `type/*` label\n' +
                 '- ✅ Must have at least one `area/*` label\n' +
                 '- ❌ Must NOT have special labels (`needs-review`, `needs-testing`, `blocked`, `wip`, `invalid`, `wontfix`, `duplicate`)';
-              
-              if (botComment) {
-                await github.rest.issues.updateComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  comment_id: botComment.id,
-                  body: message
-                });
-              } else {
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: context.issue.number,
-                  body: message
-                });
-              }
-              
+
               core.setFailed(errors.join('\n'));
             } else {
-              // All checks passed - update or remove the warning comment
-              if (botComment) {
-                const successMessage = '## ✅ PR Label Validation Passed\n\n' +
-                  '_All label requirements are met!_';
-                
-                await github.rest.issues.updateComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  comment_id: botComment.id,
-                  body: successMessage
-                });
-              }
-              
+              message = '## ✅ PR Label Validation Passed\n\n' +
+                '_All label requirements are met!_';
+
               core.info(`✅ All label requirements met!`);
               core.info(`   Type labels: ${typeLabels.join(', ')}`);
               core.info(`   Area labels: ${areaLabels.join(', ')}`);
             }
 
+            // Write message to file for sticky comment
+            const fs = require('fs');
+            fs.writeFileSync('pr-label-validation.md', message);
+
+      - name: Post label validation comment
+        uses: marocchino/sticky-pull-request-comment@331f8f5b4215f0445d3c07b4967662a32a2d3e31 # v2
+        with:
+          header: pr-labels
+          path: pr-label-validation.md

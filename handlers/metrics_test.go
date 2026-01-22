@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"io"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -14,12 +15,13 @@ func TestMetricsHandler(t *testing.T) {
 
 	app.Get("/metrics", MetricsHandler)
 
-	req := httptest.NewRequest("GET", "/metrics", nil)
+	req := httptest.NewRequest("GET", "/metrics", http.NoBody)
 	resp, err := app.Test(req, -1)
 
 	if err != nil {
 		t.Fatalf("Failed to send request: %v", err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != fiber.StatusOK {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
@@ -45,12 +47,13 @@ func TestMetricsHandlerContentType(t *testing.T) {
 
 	app.Get("/metrics", MetricsHandler)
 
-	req := httptest.NewRequest("GET", "/metrics", nil)
+	req := httptest.NewRequest("GET", "/metrics", http.NoBody)
 	resp, err := app.Test(req, -1)
 
 	if err != nil {
 		t.Fatalf("Failed to send request: %v", err)
 	}
+	defer resp.Body.Close()
 
 	// Prometheus metrics endpoint typically returns text/plain
 	contentType := resp.Header.Get("Content-Type")
@@ -66,7 +69,7 @@ func TestMetricsHandlerMultipleCalls(t *testing.T) {
 
 	// Call metrics endpoint multiple times
 	for i := 0; i < 5; i++ {
-		req := httptest.NewRequest("GET", "/metrics", nil)
+		req := httptest.NewRequest("GET", "/metrics", http.NoBody)
 		resp, err := app.Test(req, -1)
 
 		if err != nil {
@@ -76,5 +79,6 @@ func TestMetricsHandlerMultipleCalls(t *testing.T) {
 		if resp.StatusCode != fiber.StatusOK {
 			t.Errorf("Expected status 200 on iteration %d, got %d", i, resp.StatusCode)
 		}
+		resp.Body.Close()
 	}
 }

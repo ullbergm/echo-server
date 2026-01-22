@@ -18,9 +18,9 @@ var Version string
 
 // TemplateData wraps the response with additional template data
 type TemplateData struct {
-	models.EchoResponse
 	PageTitle string
 	Version   string
+	models.EchoResponse
 }
 
 // EchoHandler handles echo requests for all paths and methods
@@ -78,7 +78,7 @@ func EchoHandlerHead() fiber.Handler {
 func buildEchoResponse(c *fiber.Ctx, jwtService *services.JWTService, bodyService *services.BodyService) models.EchoResponse {
 	response := models.EchoResponse{
 		Request:    buildRequestInfo(c, bodyService),
-		Server:     buildServerInfo(c),
+		Server:     buildServerInfo(),
 		Kubernetes: getKubernetesInfo(),
 	}
 
@@ -127,8 +127,11 @@ func buildHeadersMap(c *fiber.Ctx) map[string]string {
 	return headers
 }
 
-func buildServerInfo(c *fiber.Ctx) models.ServerInfo {
-	hostname, _ := os.Hostname()
+func buildServerInfo() models.ServerInfo {
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "unknown"
+	}
 	hostAddress := getHostAddress()
 
 	info := models.ServerInfo{

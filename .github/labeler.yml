@@ -4,41 +4,47 @@
 # Type labels
 type/documentation:
   - changed-files:
-    - any-glob-to-any-file: ['**/*.md', 'docs/**/*']
+      - any-glob-to-any-file: ["**/*.md", "docs/**/*"]
 
 type/ci:
   - changed-files:
-    - any-glob-to-any-file: ['.github/workflows/**/*', '.github/actions/**/*']
+      - any-glob-to-any-file: [".github/workflows/**/*", ".github/actions/**/*"]
 
 type/dependencies:
   - changed-files:
-    - any-glob-to-any-file: ['go.mod', 'go.sum']
+      - any-glob-to-any-file: ["go.mod", "go.sum"]
 
 # Area labels
 area/handlers:
   - changed-files:
-    - any-glob-to-any-file: ['handlers/**/*']
+      - any-glob-to-any-file: ["handlers/**/*"]
 
 area/models:
   - changed-files:
-    - any-glob-to-any-file: ['models/**/*']
+      - any-glob-to-any-file: ["models/**/*"]
 
 area/services:
   - changed-files:
-    - any-glob-to-any-file: ['services/**/*']
+      - any-glob-to-any-file: ["services/**/*"]
 
 area/templates:
   - changed-files:
-    - any-glob-to-any-file: ['templates/**/*']
+      - any-glob-to-any-file: ["templates/**/*"]
 
 area/docker:
   - changed-files:
-    - any-glob-to-any-file: ['Dockerfile', 'docker-compose.yml', '.dockerignore']
+      - any-glob-to-any-file:
+          ["Dockerfile", "docker-compose.yml", ".dockerignore"]
 
 area/kubernetes:
   - changed-files:
-    - any-glob-to-any-file: ['deploy/kubernetes/**/*', 'deploy/openshift/**/*', 'kubernetes-deployment.yaml']
+      - any-glob-to-any-file:
+          [
+            "deploy/kubernetes/**/*",
+            "deploy/openshift/**/*",
+            "kubernetes-deployment.yaml",
+          ]
 
 area/github:
   - changed-files:
-    - any-glob-to-any-file: ['.github/workflows/**/*', '.github/actions/**/*']
+      - any-glob-to-any-file: [".github/workflows/**/*", ".github/actions/**/*"]

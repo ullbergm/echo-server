@@ -1,0 +1,75 @@
+name: Pre-commit Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pre-commit:
+    name: Run Pre-commit Hooks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+        with:
+          fetch-depth: 0 # Full history for better commit message validation
+
+      - name: Set up Go
+        uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6
+        with:
+          go-version: "1.25.6"
+          cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: |
+          pip install pre-commit
+          npm install -g markdownlint-cli @commitlint/cli @commitlint/config-conventional
+
+      - name: Install hadolint
+        run: |
+          HADOLINT_VERSION="2.14.0"
+          HADOLINT_URL="https://github.com/hadolint/hadolint/releases/download"
+          wget -O /usr/local/bin/hadolint \
+            "${HADOLINT_URL}/v${HADOLINT_VERSION}/hadolint-Linux-x86_64"
+          chmod +x /usr/local/bin/hadolint
+
+      - name: Cache pre-commit environments
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+          restore-keys: |
+            pre-commit-${{ runner.os }}-
+
+      - name: Run pre-commit on all files
+        run: pre-commit run --all-files --show-diff-on-failure
+
+      - name: Validate PR commits (Pull Request only)
+        if: github.event_name == 'pull_request'
+        run: |
+          # Validate all commits in the PR
+          BASE="${{ github.base_ref }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+          git log --format=%H origin/$BASE..$HEAD | while read -r commit; do
+            echo "Validating commit: $commit"
+            git log -1 --format=%B "$commit" | npx @commitlint/cli --config .commitlintrc.yml
+          done

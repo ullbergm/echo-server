@@ -1,6 +1,7 @@
 package services
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -81,12 +82,13 @@ func TestMetricsMiddleware(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(tt.method, tt.path, nil)
+			req := httptest.NewRequest(tt.method, tt.path, http.NoBody)
 			resp, err := app.Test(req, -1)
 
 			if err != nil {
 				t.Fatalf("Failed to send request: %v", err)
 			}
+			defer resp.Body.Close()
 
 			if resp.StatusCode != fiber.StatusOK && resp.StatusCode != fiber.StatusNotFound {
 				t.Errorf("Expected status 200 or 404, got %d", resp.StatusCode)
@@ -126,12 +128,13 @@ func TestMetricsMiddlewareError(t *testing.T) {
 		return fiber.NewError(fiber.StatusInternalServerError, "test error")
 	})
 
-	req := httptest.NewRequest("GET", "/error", nil)
+	req := httptest.NewRequest("GET", "/error", http.NoBody)
 	resp, err := app.Test(req, -1)
 
 	if err != nil {
 		t.Fatalf("Failed to send request: %v", err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != fiber.StatusInternalServerError {
 		t.Errorf("Expected status 500, got %d", resp.StatusCode)
@@ -170,10 +173,13 @@ func TestMetricsServiceConcurrency(t *testing.T) {
 	done := make(chan bool)
 	for i := 0; i < 10; i++ {
 		go func() {
-			req := httptest.NewRequest("GET", "/concurrent", nil)
-			_, err := app.Test(req, -1)
+			req := httptest.NewRequest("GET", "/concurrent", http.NoBody)
+			resp, err := app.Test(req, -1)
 			if err != nil {
 				t.Errorf("Failed to send request: %v", err)
+			}
+			if resp != nil {
+				resp.Body.Close()
 			}
 			done <- true
 		}()

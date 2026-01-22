@@ -19,98 +19,98 @@ spec:
         description: "Echo Server - HTTP request reflection service"
     spec:
       containers:
-      - name: echo-server
-        image: ghcr.io/ullbergm/echo-server:latest
-        ports:
-        - containerPort: 8080
-          name: http
-        - containerPort: 8443
-          name: https
-        env:
-        # TLS Configuration (optional)
-        # Uncomment to enable TLS/HTTPS
-        # - name: TLS_ENABLED
-        #   value: "true"
-        # - name: TLS_PORT
-        #   value: "8443"
-        # - name: TLS_CERT_FILE
-        #   value: "/certs/tls.crt"
-        # - name: TLS_KEY_FILE
-        #   value: "/certs/tls.key"
-        # Kubernetes pod metadata via Downward API
-        - name: K8S_NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-        - name: K8S_POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: K8S_POD_IP
-          valueFrom:
-            fieldRef:
-              fieldPath: status.podIP
-        - name: K8S_NODE_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: spec.nodeName
-        # Pod labels
-        - name: K8S_LABEL_app
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.labels['app']
-        - name: K8S_LABEL_deployment
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.labels['deployment']
-        # Pod annotations
-        - name: K8S_ANNOTATION_description
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.annotations['description']
-        # Volume mounts for TLS certificates (optional)
+        - name: echo-server
+          image: ghcr.io/ullbergm/echo-server:latest
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 8443
+              name: https
+          env:
+            # TLS Configuration (optional)
+            # Uncomment to enable TLS/HTTPS
+            # - name: TLS_ENABLED
+            #   value: "true"
+            # - name: TLS_PORT
+            #   value: "8443"
+            # - name: TLS_CERT_FILE
+            #   value: "/certs/tls.crt"
+            # - name: TLS_KEY_FILE
+            #   value: "/certs/tls.key"
+            # Kubernetes pod metadata via Downward API
+            - name: K8S_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: K8S_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: K8S_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: K8S_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            # Pod labels
+            - name: K8S_LABEL_app
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['app']
+            - name: K8S_LABEL_deployment
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['deployment']
+            # Pod annotations
+            - name: K8S_ANNOTATION_description
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.annotations['description']
+          # Volume mounts for TLS certificates (optional)
+          # Uncomment when using TLS with certificates from secrets
+          # volumeMounts:
+          # - name: tls-certs
+          #   mountPath: /certs
+          #   readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /healthz/live
+              port: 8080
+              # Use HTTPS when TLS is enabled
+              # scheme: HTTPS
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz/ready
+              port: 8080
+              # Use HTTPS when TLS is enabled
+              # scheme: HTTPS
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "100m"
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+        # Volumes for TLS certificates (optional)
         # Uncomment when using TLS with certificates from secrets
-        # volumeMounts:
+        # volumes:
         # - name: tls-certs
-        #   mountPath: /certs
-        #   readOnly: true
-        livenessProbe:
-          httpGet:
-            path: /healthz/live
-            port: 8080
-            # Use HTTPS when TLS is enabled
-            # scheme: HTTPS
-          initialDelaySeconds: 10
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /healthz/ready
-            port: 8080
-            # Use HTTPS when TLS is enabled
-            # scheme: HTTPS
-          initialDelaySeconds: 5
-          periodSeconds: 5
-        resources:
-          requests:
-            memory: "32Mi"
-            cpu: "100m"
-          limits:
-            memory: "128Mi"
-            cpu: "500m"
-        securityContext:
-          allowPrivilegeEscalation: false
-          runAsNonRoot: true
-          capabilities:
-            drop:
-            - ALL
-      # Volumes for TLS certificates (optional)
-      # Uncomment when using TLS with certificates from secrets
-      # volumes:
-      # - name: tls-certs
-      #   secret:
-      #     secretName: echo-server-tls
-      #     items:
-      #     - key: tls.crt
-      #       path: tls.crt
-      #     - key: tls.key
-      #       path: tls.key
+        #   secret:
+        #     secretName: echo-server-tls
+        #     items:
+        #     - key: tls.crt
+        #       path: tls.crt
+        #     - key: tls.key
+        #       path: tls.key
