@@ -60,5 +60,40 @@ jobs:
       - name: Generate coverage
         run: task coverage
 
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            coverage.out
+            coverage.html
+          retention-days: 30
+
+      - name: Generate coverage summary
+        id: coverage
+        run: |
+          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}')
+          echo "total=$COVERAGE" >> $GITHUB_OUTPUT
+
+          # Generate detailed coverage report
+          echo "## 📊 Code Coverage Report" > coverage-summary.md
+          echo "" >> coverage-summary.md
+          echo "**Total Coverage:** \`$COVERAGE\`" >> coverage-summary.md
+          echo "" >> coverage-summary.md
+          echo "### Coverage by Package" >> coverage-summary.md
+          echo "" >> coverage-summary.md
+          echo "\`\`\`" >> coverage-summary.md
+          go tool cover -func=coverage.out >> coverage-summary.md
+          echo "\`\`\`" >> coverage-summary.md
+          echo "" >> coverage-summary.md
+          echo "📁 [Download full coverage report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> coverage-summary.md
+
+      - name: Add coverage PR comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        if: github.event_name == 'pull_request'
+        with:
+          recreate: true
+          path: coverage-summary.md
+
       - name: Build binary
         run: task build

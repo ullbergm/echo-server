@@ -69,10 +69,7 @@ jobs:
           # Validate all commits in the PR
           BASE="${{ github.base_ref }}"
           HEAD="${{ github.event.pull_request.head.sha }}"
-          git log --format=%B origin/$BASE..$HEAD | \
-          while IFS= read -r line; do
-            if [ -n "$line" ]; then
-              echo "Validating commit message: $line"
-              echo "$line" | npx @commitlint/cli --config .commitlintrc.yml
-            fi
+          git log --format=%H origin/$BASE..$HEAD | while read -r commit; do
+            echo "Validating commit: $commit"
+            git log -1 --format=%B "$commit" | npx @commitlint/cli --config .commitlintrc.yml
           done
