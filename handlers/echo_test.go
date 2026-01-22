@@ -904,6 +904,18 @@ func TestParseSetCookieHeader(t *testing.T) {
 			expectedValue: "value",
 		},
 		{
+			name:        "empty header",
+			headerValue: "",
+			expectNil:   true,
+		},
+		{
+			name:          "cookie with SameSite None",
+			headerValue:   "tracking=id; SameSite=None",
+			expectedName:  "tracking",
+			expectedValue: "id",
+			sameSite:      "None",
+		},
+		{
 			name:          "cookie with path",
 			headerValue:   "session=abc; Path=/app",
 			expectedName:  "session",
@@ -1011,5 +1023,614 @@ func TestParseSetCookieHeader(t *testing.T) {
 				t.Errorf("Expected SameSite %s, got %s", tt.sameSite, cookie.SameSite)
 			}
 		})
+	}
+}
+
+// TestParseExpires tests the parseExpires function with various date formats
+func TestParseExpires(t *testing.T) {
+	tests := []struct {
+		name        string
+		dateStr     string
+		expectError bool
+	}{
+		{
+			name:        "RFC1123 format",
+			dateStr:     "Mon, 02 Jan 2006 15:04:05 MST",
+			expectError: false,
+		},
+		{
+			name:        "RFC850 format",
+			dateStr:     "Monday, 02-Jan-06 15:04:05 MST",
+			expectError: false,
+		},
+		{
+			name:        "ANSIC format",
+			dateStr:     "Mon Jan  2 15:04:05 2006",
+			expectError: false,
+		},
+		{
+			name:        "RFC3339 format",
+			dateStr:     "2006-01-02T15:04:05Z",
+			expectError: false,
+		},
+		{
+			name:        "invalid format",
+			dateStr:     "not-a-date",
+			expectError: true,
+		},
+		{
+			name:        "empty string",
+			dateStr:     "",
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := parseExpires(tt.dateStr)
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("Expected error parsing '%s', got nil", tt.dateStr)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Unexpected error parsing '%s': %v", tt.dateStr, err)
+				}
+				if result.IsZero() {
+					t.Error("Expected non-zero time result")
+				}
+			}
+		})
+	}
+}
+
+// TestGetCompressionInfo tests the getCompressionInfo function
+func TestGetCompressionInfo(t *testing.T) {
+	tests := []struct {
+		name                   string
+		acceptEncoding         string
+		expectedEncodings      []string
+		expectedEncodingsCount int
+		expectedSupported      bool
+	}{
+		{
+			name:                   "no accept encoding",
+			acceptEncoding:         "",
+			expectedSupported:      false,
+			expectedEncodingsCount: 0,
+		},
+		{
+			name:                   "gzip only",
+			acceptEncoding:         "gzip",
+			expectedSupported:      true,
+			expectedEncodingsCount: 1,
+			expectedEncodings:      []string{"gzip"},
+		},
+		{
+			name:                   "multiple encodings",
+			acceptEncoding:         "gzip, deflate, br",
+			expectedSupported:      true,
+			expectedEncodingsCount: 3,
+			expectedEncodings:      []string{"gzip", "deflate", "br"},
+		},
+		{
+			name:                   "with quality values",
+			acceptEncoding:         "gzip;q=1.0, deflate;q=0.5, *;q=0.1",
+			expectedSupported:      true,
+			expectedEncodingsCount: 3,
+			expectedEncodings:      []string{"gzip", "deflate", "*"},
+		},
+		{
+			name:                   "identity encoding",
+			acceptEncoding:         "identity",
+			expectedSupported:      true,
+			expectedEncodingsCount: 1,
+			expectedEncodings:      []string{"identity"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app := fiber.New()
+			app.Get("/test", func(c *fiber.Ctx) error {
+				info := getCompressionInfo(c)
+				if info == nil {
+					t.Fatal("Expected non-nil compression info")
+				}
+
+				if info.Supported != tt.expectedSupported {
+					t.Errorf("Expected Supported=%v, got %v", tt.expectedSupported, info.Supported)
+				}
+
+				if len(info.AcceptedEncodings) != tt.expectedEncodingsCount {
+					t.Errorf("Expected %d encodings, got %d", tt.expectedEncodingsCount, len(info.AcceptedEncodings))
+				}
+
+				// Verify expected encodings are present
+				for _, expected := range tt.expectedEncodings {
+					found := false
+					for _, actual := range info.AcceptedEncodings {
+						if actual == expected {
+							found = true
+							break
+						}
+					}
+					if !found {
+						t.Errorf("Expected encoding '%s' not found in %v", expected, info.AcceptedEncodings)
+					}
+				}
+
+				return c.SendStatus(fiber.StatusOK)
+			})
+
+			req := httptest.NewRequest("GET", "/test", http.NoBody)
+			if tt.acceptEncoding != "" {
+				req.Header.Set("Accept-Encoding", tt.acceptEncoding)
+			}
+
+			resp, err := app.Test(req, -1)
+			if err != nil {
+				t.Fatalf("Failed to send request: %v", err)
+			}
+			resp.Body.Close()
+		})
+	}
+}
+
+// TestGetCompressionInfo_WithResponseEncoding tests compression info when response has Content-Encoding
+func TestGetCompressionInfo_WithResponseEncoding(t *testing.T) {
+	app := fiber.New()
+	app.Get("/test", func(c *fiber.Ctx) error {
+		// Set a Content-Encoding header on the response
+		c.Response().Header.Set("Content-Encoding", "gzip")
+
+		info := getCompressionInfo(c)
+		if info == nil {
+			t.Fatal("Expected non-nil compression info")
+		}
+
+		// Check that ResponseEncoding is captured
+		if info.ResponseEncoding != "gzip" {
+			t.Errorf("Expected ResponseEncoding='gzip', got '%s'", info.ResponseEncoding)
+		}
+
+		return c.SendStatus(fiber.StatusOK)
+	})
+
+	req := httptest.NewRequest("GET", "/test", http.NoBody)
+	req.Header.Set("Accept-Encoding", "gzip, deflate")
+
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatalf("Failed to send request: %v", err)
+	}
+	resp.Body.Close()
+}
+
+// TestGetRequestTLSInfo tests the getRequestTLSInfo function
+func TestGetRequestTLSInfo(t *testing.T) {
+	// Note: We can't easily simulate HTTPS with httptest
+	// So we only test the HTTP case and the function logic
+	t.Run("HTTP request", func(t *testing.T) {
+		app := fiber.New()
+		app.Get("/test", func(c *fiber.Ctx) error {
+			info := getRequestTLSInfo(c)
+			if info == nil {
+				t.Fatal("Expected non-nil TLS info")
+			}
+
+			if info.Enabled {
+				t.Error("Expected Enabled=false for HTTP request")
+			}
+
+			return c.SendStatus(fiber.StatusOK)
+		})
+
+		req := httptest.NewRequest("GET", "/test", http.NoBody)
+
+		resp, err := app.Test(req, -1)
+		if err != nil {
+			t.Fatalf("Failed to send request: %v", err)
+		}
+		resp.Body.Close()
+	})
+}
+
+// TestGetServerTLSInfo tests the getServerTLSInfo function
+func TestGetServerTLSInfo(t *testing.T) {
+	tests := []struct {
+		envVars        map[string]string
+		expectedFields map[string]string
+		name           string
+		expectedNil    bool
+	}{
+		{
+			name:        "TLS not enabled",
+			envVars:     map[string]string{},
+			expectedNil: true,
+		},
+		{
+			name: "TLS enabled false",
+			envVars: map[string]string{
+				"TLS_ENABLED": "false",
+			},
+			expectedNil: true,
+		},
+		{
+			name: "TLS enabled true with no cert info",
+			envVars: map[string]string{
+				"TLS_ENABLED": "true",
+			},
+			expectedNil: false,
+		},
+		{
+			name: "TLS enabled with all cert info",
+			envVars: map[string]string{
+				"TLS_ENABLED":          "true",
+				"_TLS_CERT_SUBJECT":    "CN=test",
+				"_TLS_CERT_ISSUER":     "CN=issuer",
+				"_TLS_CERT_NOT_BEFORE": "2024-01-01T00:00:00Z",
+				"_TLS_CERT_NOT_AFTER":  "2025-01-01T00:00:00Z",
+				"_TLS_CERT_SERIAL":     "12345",
+				"_TLS_CERT_DNS_NAMES":  "localhost, example.com",
+			},
+			expectedNil: false,
+			expectedFields: map[string]string{
+				"Subject":      "CN=test",
+				"Issuer":       "CN=issuer",
+				"NotBefore":    "2024-01-01T00:00:00Z",
+				"NotAfter":     "2025-01-01T00:00:00Z",
+				"SerialNumber": "12345",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set environment variables
+			for key, val := range tt.envVars {
+				if err := os.Setenv(key, val); err != nil {
+					t.Fatalf("Failed to set env var %s: %v", key, err)
+				}
+			}
+
+			// Clean up after test
+			defer func() {
+				for key := range tt.envVars {
+					_ = os.Unsetenv(key)
+				}
+			}()
+
+			info := getServerTLSInfo()
+
+			if tt.expectedNil {
+				if info != nil {
+					t.Error("Expected nil TLS info")
+				}
+				return
+			}
+
+			if info == nil {
+				t.Fatal("Expected non-nil TLS info")
+			}
+
+			if !info.Enabled {
+				t.Error("Expected Enabled to be true")
+			}
+
+			// Check expected fields
+			if tt.expectedFields != nil {
+				if info.Subject != tt.expectedFields["Subject"] {
+					t.Errorf("Expected Subject=%s, got %s", tt.expectedFields["Subject"], info.Subject)
+				}
+				if info.Issuer != tt.expectedFields["Issuer"] {
+					t.Errorf("Expected Issuer=%s, got %s", tt.expectedFields["Issuer"], info.Issuer)
+				}
+				if info.NotBefore != tt.expectedFields["NotBefore"] {
+					t.Errorf("Expected NotBefore=%s, got %s", tt.expectedFields["NotBefore"], info.NotBefore)
+				}
+				if info.NotAfter != tt.expectedFields["NotAfter"] {
+					t.Errorf("Expected NotAfter=%s, got %s", tt.expectedFields["NotAfter"], info.NotAfter)
+				}
+				if info.SerialNumber != tt.expectedFields["SerialNumber"] {
+					t.Errorf("Expected SerialNumber=%s, got %s", tt.expectedFields["SerialNumber"], info.SerialNumber)
+				}
+				// Check DNS names
+				if len(info.DNSNames) != 2 {
+					t.Errorf("Expected 2 DNS names, got %d", len(info.DNSNames))
+				}
+			}
+		})
+	}
+}
+
+// TestBuildServerInfo tests the buildServerInfo function
+func TestBuildServerInfo(t *testing.T) {
+	info := buildServerInfo()
+
+	// Hostname should always be set (to "unknown" at minimum)
+	if info.Hostname == "" {
+		t.Error("Expected hostname to be set")
+	}
+
+	// Environment should be a valid map
+	if info.Environment == nil {
+		t.Error("Expected environment map to be non-nil")
+	}
+}
+
+// TestGetKubernetesInfoWithAnnotations tests Kubernetes info with annotations
+func TestGetKubernetesInfoWithAnnotations(t *testing.T) {
+	// Set up environment for Kubernetes with annotations
+	envVars := map[string]string{
+		"K8S_NAMESPACE":           "production",
+		"K8S_POD_NAME":            "echo-server-abc",
+		"K8S_POD_IP":              "10.0.0.5",
+		"K8S_NODE_NAME":           "node-1",
+		"KUBERNETES_SERVICE_HOST": "10.0.0.1",
+		"KUBERNETES_SERVICE_PORT": "443",
+		"K8S_LABEL_app":           "echo-server",
+		"K8S_ANNOTATION_owner":    "team-a",
+		"K8S_ANNOTATION_version":  "v1.0.0",
+	}
+
+	for key, val := range envVars {
+		if err := os.Setenv(key, val); err != nil {
+			t.Fatalf("Failed to set env var %s: %v", key, err)
+		}
+	}
+
+	defer func() {
+		for key := range envVars {
+			_ = os.Unsetenv(key)
+		}
+	}()
+
+	k8sInfo := getKubernetesInfo()
+
+	if k8sInfo == nil {
+		t.Fatal("Expected non-nil Kubernetes info")
+	}
+
+	if k8sInfo.Namespace != "production" {
+		t.Errorf("Expected namespace 'production', got '%s'", k8sInfo.Namespace)
+	}
+
+	if k8sInfo.PodIP != "10.0.0.5" {
+		t.Errorf("Expected pod IP '10.0.0.5', got '%s'", k8sInfo.PodIP)
+	}
+
+	if k8sInfo.NodeName != "node-1" {
+		t.Errorf("Expected node name 'node-1', got '%s'", k8sInfo.NodeName)
+	}
+
+	if k8sInfo.ServiceHost != "10.0.0.1" {
+		t.Errorf("Expected service host '10.0.0.1', got '%s'", k8sInfo.ServiceHost)
+	}
+
+	if k8sInfo.ServicePort != "443" {
+		t.Errorf("Expected service port '443', got '%s'", k8sInfo.ServicePort)
+	}
+
+	// Check labels
+	if len(k8sInfo.Labels) == 0 {
+		t.Error("Expected labels to be present")
+	}
+
+	// Check annotations
+	if len(k8sInfo.Annotations) == 0 {
+		t.Error("Expected annotations to be present")
+	}
+
+	if k8sInfo.Annotations["owner"] != "team-a" {
+		t.Errorf("Expected annotation owner='team-a', got '%s'", k8sInfo.Annotations["owner"])
+	}
+}
+
+// TestEchoHandler_DeleteWithBody tests DELETE with body
+func TestEchoHandler_DeleteWithBody(t *testing.T) {
+	app := fiber.New()
+	jwtService := services.NewJWTService()
+	bodyService := services.NewBodyService()
+
+	app.Delete("/test", EchoHandler(jwtService, bodyService))
+
+	jsonBody := `{"id":"12345"}`
+	req := httptest.NewRequest("DELETE", "/test", strings.NewReader(jsonBody))
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatalf("Failed to send request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != fiber.StatusOK {
+		t.Errorf("Expected status 200, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Failed to read response body: %v", err)
+	}
+
+	var echoResponse models.EchoResponse
+	err = json.Unmarshal(body, &echoResponse)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+
+	// Verify body was captured
+	if echoResponse.Request.Body == nil {
+		t.Fatal("Expected body to be present for DELETE request")
+	}
+}
+
+// TestEchoHandler_PatchWithBody tests PATCH with body
+func TestEchoHandler_PatchWithBody(t *testing.T) {
+	app := fiber.New()
+	jwtService := services.NewJWTService()
+	bodyService := services.NewBodyService()
+
+	app.Patch("/test", EchoHandler(jwtService, bodyService))
+
+	jsonBody := `{"field":"updated"}`
+	req := httptest.NewRequest("PATCH", "/test", strings.NewReader(jsonBody))
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatalf("Failed to send request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != fiber.StatusOK {
+		t.Errorf("Expected status 200, got %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("Failed to read response body: %v", err)
+	}
+
+	var echoResponse models.EchoResponse
+	err = json.Unmarshal(body, &echoResponse)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+
+	// Verify body was captured
+	if echoResponse.Request.Body == nil {
+		t.Fatal("Expected body to be present for PATCH request")
+	}
+}
+
+// TestParseSetCookieHeader_WithExpires tests cookie parsing with Expires attribute
+func TestParseSetCookieHeader_WithExpires(t *testing.T) {
+	tests := []struct {
+		name        string
+		header      string
+		expectNil   bool
+		checkExpiry bool
+	}{
+		{
+			name:        "cookie with RFC1123 expires",
+			header:      "session=abc; Expires=Mon, 02 Jan 2006 15:04:05 GMT",
+			expectNil:   false,
+			checkExpiry: true,
+		},
+		{
+			name:        "cookie with invalid expires",
+			header:      "session=abc; Expires=invalid-date",
+			expectNil:   false,
+			checkExpiry: false, // Should be zero time
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cookie := parseSetCookieHeader(tt.header)
+
+			if tt.expectNil {
+				if cookie != nil {
+					t.Error("Expected nil cookie")
+				}
+				return
+			}
+
+			if cookie == nil {
+				t.Fatal("Expected non-nil cookie")
+			}
+
+			if cookie.Name != "session" {
+				t.Errorf("Expected name 'session', got '%s'", cookie.Name)
+			}
+
+			if tt.checkExpiry && cookie.Expires.IsZero() {
+				t.Error("Expected non-zero Expires time")
+			}
+		})
+	}
+}
+
+// TestEchoHandlerHead_CustomStatus tests HEAD request with custom status
+func TestEchoHandlerHead_CustomStatus(t *testing.T) {
+	app := fiber.New()
+	app.Head("/test", EchoHandlerHead())
+
+	req := httptest.NewRequest("HEAD", "/test", http.NoBody)
+	req.Header.Set("x-set-response-status-code", "201")
+
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatalf("Failed to send request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 201 {
+		t.Errorf("Expected status 201, got %d", resp.StatusCode)
+	}
+}
+
+// TestGetEnvironmentVariablesInKubernetes tests env vars when in Kubernetes
+func TestGetEnvironmentVariablesInKubernetes(t *testing.T) {
+	// Set up environment to simulate Kubernetes
+	envVars := map[string]string{
+		"K8S_NAMESPACE": "default",
+		"K8S_POD_NAME":  "echo-123",
+	}
+
+	for key, val := range envVars {
+		if err := os.Setenv(key, val); err != nil {
+			t.Fatalf("Failed to set env var %s: %v", key, err)
+		}
+	}
+
+	defer func() {
+		for key := range envVars {
+			_ = os.Unsetenv(key)
+		}
+	}()
+
+	result := getEnvironmentVariables()
+
+	// When in Kubernetes, K8S_* vars should NOT be included in the general env vars section
+	// (they go in the kubernetes section instead)
+	for key := range result {
+		if strings.HasPrefix(key, "K8S_") {
+			t.Errorf("K8S_ variables should not be in environment section when running in Kubernetes: %s", key)
+		}
+	}
+}
+
+// TestGetEnvironmentVariablesWithCustomDisplay tests custom environment variable display
+func TestGetEnvironmentVariablesWithCustomDisplay(t *testing.T) {
+	// Set up environment
+	if err := os.Setenv("ECHO_ENVIRONMENT_VARIABLES_DISPLAY", "TEST_VAR1,TEST_VAR2"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Setenv("TEST_VAR1", "value1"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Setenv("TEST_VAR2", "value2"); err != nil {
+		t.Fatal(err)
+	}
+
+	defer func() {
+		_ = os.Unsetenv("ECHO_ENVIRONMENT_VARIABLES_DISPLAY")
+		_ = os.Unsetenv("TEST_VAR1")
+		_ = os.Unsetenv("TEST_VAR2")
+	}()
+
+	result := getEnvironmentVariables()
+
+	if result["TEST_VAR1"] != "value1" {
+		t.Errorf("Expected TEST_VAR1=value1, got %s", result["TEST_VAR1"])
+	}
+
+	if result["TEST_VAR2"] != "value2" {
+		t.Errorf("Expected TEST_VAR2=value2, got %s", result["TEST_VAR2"])
 	}
 }

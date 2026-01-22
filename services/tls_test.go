@@ -204,3 +204,92 @@ func TestGetOrGenerateCertificate_InvalidFiles(t *testing.T) {
 		t.Error("Expected error when loading invalid certificate files")
 	}
 }
+
+// TestLogCertificateInfo tests the logCertificateInfo method
+func TestLogCertificateInfo(t *testing.T) {
+	service := NewTLSService()
+
+	// Generate a certificate first
+	cert, err := service.generateSelfSignedCertificate()
+	if err != nil {
+		t.Fatalf("Failed to generate certificate: %v", err)
+	}
+
+	// This should not panic
+	service.logCertificateInfo(&cert)
+}
+
+// TestLogCertificateInfo_EmptyCert tests logCertificateInfo with empty certificate
+func TestLogCertificateInfo_EmptyCert(t *testing.T) {
+	service := NewTLSService()
+
+	emptyCert := &tls.Certificate{}
+
+	// This should not panic, just return early
+	service.logCertificateInfo(emptyCert)
+}
+
+// TestLogCertificateInfo_InvalidCert tests logCertificateInfo with invalid certificate data
+func TestLogCertificateInfo_InvalidCert(t *testing.T) {
+	service := NewTLSService()
+
+	invalidCert := &tls.Certificate{
+		Certificate: [][]byte{[]byte("invalid cert data")},
+	}
+
+	// This should not panic, just log a warning
+	service.logCertificateInfo(invalidCert)
+}
+
+// TestGetOrGenerateCertificate_CertExistsKeyMissing tests when cert exists but key doesn't
+func TestGetOrGenerateCertificate_CertExistsKeyMissing(t *testing.T) {
+	tmpDir := t.TempDir()
+	certFile := filepath.Join(tmpDir, "exists.crt")
+	keyFile := filepath.Join(tmpDir, "missing.key")
+
+	// Generate a certificate
+	service := NewTLSService()
+	_, genErr := service.generateSelfSignedCertificate()
+	if genErr != nil {
+		t.Fatalf("Failed to generate certificate: %v", genErr)
+	}
+
+	// Write only the cert file
+	if err := os.WriteFile(certFile, service.certPEM, 0o644); err != nil {
+		t.Fatalf("Failed to write cert file: %v", err)
+	}
+
+	// Should generate a new certificate since key is missing
+	service2 := NewTLSService()
+	cert, err := service2.GetOrGenerateCertificate(certFile, keyFile)
+	if err != nil {
+		t.Fatalf("Failed when key file missing: %v", err)
+	}
+
+	if len(cert.Certificate) == 0 {
+		t.Fatal("Expected certificate to be generated")
+	}
+}
+
+// TestGenerateSelfSignedCertificate_MultipleCalls tests generating multiple certificates
+func TestGenerateSelfSignedCertificate_MultipleCalls(t *testing.T) {
+	service := NewTLSService()
+
+	cert1, err := service.generateSelfSignedCertificate()
+	if err != nil {
+		t.Fatalf("Failed to generate first certificate: %v", err)
+	}
+
+	cert2, err := service.generateSelfSignedCertificate()
+	if err != nil {
+		t.Fatalf("Failed to generate second certificate: %v", err)
+	}
+
+	// Each certificate should have a unique serial number
+	x509Cert1, _ := x509.ParseCertificate(cert1.Certificate[0])
+	x509Cert2, _ := x509.ParseCertificate(cert2.Certificate[0])
+
+	if x509Cert1.SerialNumber.Cmp(x509Cert2.SerialNumber) == 0 {
+		t.Error("Expected different serial numbers for different certificates")
+	}
+}

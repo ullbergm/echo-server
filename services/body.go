@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"encoding/xml"
 	"io"
 	"mime"
 	"mime/multipart"
@@ -140,13 +139,12 @@ func (s *BodyService) parseJSON(data []byte) interface{} {
 }
 
 // parseXML parses XML body
+// Note: Go's encoding/xml doesn't support unmarshaling to map[string]interface{}
+// so we return the XML as a string for display purposes
 func (s *BodyService) parseXML(data []byte) interface{} {
-	var result map[string]interface{}
-	if err := xml.Unmarshal(data, &result); err != nil {
-		// If XML parsing fails, return as string
-		return string(data)
-	}
-	return result
+	// Return XML as string - Go's xml.Unmarshal requires struct definitions
+	// for proper parsing, which we don't have for arbitrary XML
+	return string(data)
 }
 
 // parseFormURLEncoded parses URL-encoded form data
