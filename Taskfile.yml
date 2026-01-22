@@ -89,6 +89,38 @@ tasks:
       - echo "Running benchmarks..."
       - go test -bench=. -benchmem ./...
 
+  fuzz:
+    desc: Run all fuzz tests (10 seconds each)
+    cmds:
+      - echo "Running fuzz tests..."
+      - go test -fuzz='^FuzzJWTDecode$' -fuzztime=10s ./services/
+      - go test -fuzz='^FuzzBodyParseJSON$' -fuzztime=10s ./services/
+      - go test -fuzz='^FuzzEchoHandlerBody$' -fuzztime=10s ./handlers/
+
+  fuzz-jwt:
+    desc: Run JWT fuzzing tests
+    vars:
+      FUZZTIME: '{{default "30s" .FUZZTIME}}'
+    cmds:
+      - echo "Running JWT fuzz tests for {{.FUZZTIME}}..."
+      - go test -fuzz='^FuzzJWTDecode$' -fuzztime={{.FUZZTIME}} ./services/
+
+  fuzz-body:
+    desc: Run body parser fuzzing tests
+    vars:
+      FUZZTIME: '{{default "30s" .FUZZTIME}}'
+    cmds:
+      - echo "Running body parser fuzz tests for {{.FUZZTIME}}..."
+      - go test -fuzz='^FuzzBodyParseJSON$' -fuzztime={{.FUZZTIME}} ./services/
+
+  fuzz-handler:
+    desc: Run handler fuzzing tests
+    vars:
+      FUZZTIME: '{{default "30s" .FUZZTIME}}'
+    cmds:
+      - echo "Running handler fuzz tests for {{.FUZZTIME}}..."
+      - go test -fuzz='^FuzzEchoHandlerBody$' -fuzztime={{.FUZZTIME}} ./handlers/
+
   lint:
     desc: Run linter
     cmds:
