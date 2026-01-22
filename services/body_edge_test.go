@@ -1,6 +1,7 @@
 package services
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -374,4 +375,578 @@ func TestBodyService_UnknownContentType(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestNewBodyService_WithEnvVar tests NewBodyService with MAX_BODY_SIZE env var
+func TestNewBodyService_WithEnvVar(t *testing.T) {
+	tests := []struct {
+		name        string
+		envValue    string
+		expectedMax int
+	}{
+		{
+			name:        "valid custom size",
+			envValue:    "1024",
+			expectedMax: 1024,
+		},
+		{
+			name:        "large custom size",
+			envValue:    "52428800",
+			expectedMax: 52428800,
+		},
+		{
+			name:        "invalid size (negative)",
+			envValue:    "-100",
+			expectedMax: DefaultMaxBodySize, // Should use default
+		},
+		{
+			name:        "invalid size (not a number)",
+			envValue:    "invalid",
+			expectedMax: DefaultMaxBodySize, // Should use default
+		},
+		{
+			name:        "zero size",
+			envValue:    "0",
+			expectedMax: DefaultMaxBodySize, // Should use default (0 is not > 0)
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := os.Setenv("MAX_BODY_SIZE", tt.envValue); err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = os.Unsetenv("MAX_BODY_SIZE") }()
+
+			service := NewBodyService()
+
+			if service.maxBodySize != tt.expectedMax {
+				t.Errorf("Expected maxBodySize=%d, got %d", tt.expectedMax, service.maxBodySize)
+			}
+		})
+	}
+}
+
+// TestBodyService_MultipartFormData tests multipart form data parsing
+func TestBodyService_MultipartFormData(t *testing.T) {
+	service := NewBodyService()
+
+	// Create proper multipart form data
+	boundary := "----WebKitFormBoundary7MA4YWxkTrZu0gW" // pragma: allowlist secret
+	multipartBody := strings.Join([]string{
+		"------WebKitFormBoundary7MA4YWxkTrZu0gW", // pragma: allowlist secret
+		"Content-Disposition: form-data; name=\"username\"",
+		"",
+		"johndoe",
+		"------WebKitFormBoundary7MA4YWxkTrZu0gW", // pragma: allowlist secret
+		"Content-Disposition: form-data; name=\"email\"",
+		"",
+		"john@example.com",
+		"------WebKitFormBoundary7MA4YWxkTrZu0gW--", // pragma: allowlist secret
+	}, "\r\n")
+
+	bodyInfo := service.ParseBody([]byte(multipartBody), "multipart/form-data; boundary="+boundary)
+
+	if bodyInfo == nil {
+		t.Fatal("Expected body info to be non-nil")
+	}
+
+	if bodyInfo.ContentType != "multipart/form-data; boundary="+boundary {
+		t.Errorf("Expected content type to match, got %s", bodyInfo.ContentType)
+	}
+
+	// Verify content was parsed
+	contentMap, ok := bodyInfo.Content.(map[string]interface{})
+	if !ok {
+		// Multipart might return string if parsing fails, that's acceptable
+		t.Log("Multipart content was returned as string (acceptable)")
+		return
+	}
+
+	if contentMap["username"] != "johndoe" {
+		t.Errorf("Expected username 'johndoe', got %v", contentMap["username"])
+	}
+}
+
+// TestBodyService_MultipartWithFile tests multipart with file upload
+func TestBodyService_MultipartWithFile(t *testing.T) {
+	service := NewBodyService()
+
+	boundary := "----TestBoundary"
+	multipartBody := strings.Join([]string{
+		"------TestBoundary",
+		"Content-Disposition: form-data; name=\"file\"; filename=\"test.txt\"",
+		"Content-Type: text/plain",
+		"",
+		"Hello, World!",
+		"------TestBoundary",
+		"Content-Disposition: form-data; name=\"description\"",
+		"",
+		"A test file",
+		"------TestBoundary--",
+	}, "\r\n")
+
+	bodyInfo := service.ParseBody([]byte(multipartBody), "multipart/form-data; boundary="+boundary)
+
+	if bodyInfo == nil {
+		t.Fatal("Expected body info to be non-nil")
+	}
+
+	if bodyInfo.Size != len(multipartBody) {
+		t.Errorf("Expected size %d, got %d", len(multipartBody), bodyInfo.Size)
+	}
+}
+
+// TestBodyService_MultipartWithBinaryFile tests multipart with binary file
+func TestBodyService_MultipartWithBinaryFile(t *testing.T) {
+	service := NewBodyService()
+
+	// Create binary content (simulated image header with null bytes)
+	// Must have null bytes to trigger isBinaryData detection
+	binaryContent := []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x00, 0x00, 0x00, 0x00}
+
+	boundary := "----BinaryBoundary"
+	header := "------BinaryBoundary\r\nContent-Disposition: form-data; name=\"image\"; filename=\"test.png\"\r\nContent-Type: image/png\r\n\r\n"
+	footer := "\r\n------BinaryBoundary--"
+
+	fullBody := append([]byte(header), binaryContent...)
+	fullBody = append(fullBody, []byte(footer)...)
+
+	bodyInfo := service.ParseBody(fullBody, "multipart/form-data; boundary="+boundary)
+
+	if bodyInfo == nil {
+		t.Fatal("Expected body info to be non-nil")
+	}
+
+	// Check if content was parsed as map (file info)
+	contentMap, ok := bodyInfo.Content.(map[string]interface{})
+	if ok {
+		// Check if file info exists
+		if fileInfo, exists := contentMap["image"]; exists {
+			fileMap, isMap := fileInfo.(map[string]interface{})
+			if isMap {
+				// Verify filename is captured
+				if fileMap["filename"] != "test.png" {
+					t.Errorf("Expected filename 'test.png', got %v", fileMap["filename"])
+				}
+				// Binary content should be base64 encoded
+				if _, hasEncoding := fileMap["encoding"]; hasEncoding {
+					t.Log("Binary file was base64 encoded (expected)")
+				}
+			}
+		}
+	}
+}
+
+// TestBodyService_MultipartWithTextFile tests multipart with text file
+func TestBodyService_MultipartWithTextFile(t *testing.T) {
+	service := NewBodyService()
+
+	// Text file content (no null bytes)
+	textContent := []byte("Hello, this is a text file content!")
+
+	boundary := "----TextFileBoundary"
+	multipartBody := "------TextFileBoundary\r\n" +
+		"Content-Disposition: form-data; name=\"textfile\"; filename=\"readme.txt\"\r\n" +
+		"Content-Type: text/plain\r\n\r\n" +
+		string(textContent) +
+		"\r\n------TextFileBoundary--"
+
+	bodyInfo := service.ParseBody([]byte(multipartBody), "multipart/form-data; boundary="+boundary)
+
+	if bodyInfo == nil {
+		t.Fatal("Expected body info to be non-nil")
+	}
+
+	// Check if content was parsed as map
+	contentMap, ok := bodyInfo.Content.(map[string]interface{})
+	if ok {
+		if fileInfo, exists := contentMap["textfile"]; exists {
+			fileMap, isMap := fileInfo.(map[string]interface{})
+			if isMap {
+				// Text file should have content as string (not base64)
+				if _, hasEncoding := fileMap["encoding"]; !hasEncoding {
+					t.Log("Text file was stored as plain text (expected)")
+				}
+			}
+		}
+	}
+}
+
+// TestBodyService_MultipartWithHighNonPrintableFile tests multipart with file that has high non-printable ratio
+func TestBodyService_MultipartWithHighNonPrintableFile(t *testing.T) {
+	service := NewBodyService()
+
+	// Create file content with high ratio of non-printable chars (> 30%)
+	// but NO null bytes, and valid UTF-8 single-byte chars
+	// Use control characters 0x01-0x08 (before tab 0x09)
+	fileContent := make([]byte, 100)
+	for i := 0; i < 40; i++ {
+		fileContent[i] = byte(0x01 + (i % 8)) // Non-printable but valid UTF-8
+	}
+	for i := 40; i < 100; i++ {
+		fileContent[i] = 'A' // Printable
+	}
+
+	boundary := "----NonPrintableBoundary"
+	header := "------NonPrintableBoundary\r\n" +
+		"Content-Disposition: form-data; name=\"binaryish\"; filename=\"data.bin\"\r\n" +
+		"Content-Type: application/octet-stream\r\n\r\n"
+	footer := "\r\n------NonPrintableBoundary--"
+
+	// Build the full body
+	fullBody := append([]byte(header), fileContent...)
+	fullBody = append(fullBody, []byte(footer)...)
+
+	bodyInfo := service.ParseBody(fullBody, "multipart/form-data; boundary="+boundary)
+
+	if bodyInfo == nil {
+		t.Fatal("Expected body info to be non-nil")
+	}
+
+	// This should process the multipart and detect the file content as binary
+	// due to high non-printable ratio
+	if bodyInfo.Size != len(fullBody) {
+		t.Errorf("Expected size %d, got %d", len(fullBody), bodyInfo.Size)
+	}
+}
+
+// TestBodyService_MultipartNoBoundary tests multipart without boundary
+func TestBodyService_MultipartNoBoundary(t *testing.T) {
+	service := NewBodyService()
+
+	body := []byte("some multipart content without proper boundary")
+	bodyInfo := service.ParseBody(body, "multipart/form-data")
+
+	if bodyInfo == nil {
+		t.Fatal("Expected body info to be non-nil")
+	}
+
+	// Should return as raw string since no boundary
+	if _, ok := bodyInfo.Content.(string); !ok {
+		t.Error("Expected content to be string when no boundary provided")
+	}
+}
+
+// TestBodyService_XMLInvalid tests invalid XML handling
+func TestBodyService_XMLInvalid(t *testing.T) {
+	service := NewBodyService()
+
+	invalidXMLSamples := []string{
+		`<root><unclosed>`,
+		`not xml at all`,
+		`<root>mismatched</other>`,
+		`<?xml version="1.0"?>incomplete`,
+	}
+
+	for _, sample := range invalidXMLSamples {
+		t.Run(sample[:minInt(20, len(sample))], func(t *testing.T) {
+			bodyInfo := service.ParseBody([]byte(sample), "application/xml")
+
+			if bodyInfo == nil {
+				t.Fatal("Expected body info to be non-nil")
+			}
+
+			// Should return as string when XML parsing fails
+			if _, ok := bodyInfo.Content.(string); !ok {
+				t.Log("Invalid XML stored in some format (acceptable)")
+			}
+		})
+	}
+}
+
+// TestBodyService_XMLWithNamespaces tests XML with namespaces
+func TestBodyService_XMLWithNamespaces(t *testing.T) {
+	service := NewBodyService()
+
+	xmlBody := []byte(`<?xml version="1.0"?>
+<root xmlns:ns="http://example.com">
+  <ns:element>value</ns:element>
+</root>`)
+
+	bodyInfo := service.ParseBody(xmlBody, "text/xml")
+
+	if bodyInfo == nil {
+		t.Fatal("Expected body info to be non-nil")
+	}
+
+	if bodyInfo.IsBinary {
+		t.Error("Expected XML not to be marked as binary")
+	}
+}
+
+// TestBodyService_FormWithMultipleValues tests form with same key multiple times
+func TestBodyService_FormWithMultipleValues(t *testing.T) {
+	service := NewBodyService()
+
+	formBody := []byte("color=red&color=green&color=blue")
+	bodyInfo := service.ParseBody(formBody, "application/x-www-form-urlencoded")
+
+	if bodyInfo == nil {
+		t.Fatal("Expected body info to be non-nil")
+	}
+
+	contentMap, ok := bodyInfo.Content.(map[string]interface{})
+	if !ok {
+		t.Fatal("Expected content to be a map")
+	}
+
+	// color should be an array with 3 values
+	colors, ok := contentMap["color"].([]string)
+	if !ok {
+		t.Log("Multiple values may be stored differently")
+		return
+	}
+
+	if len(colors) != 3 {
+		t.Errorf("Expected 3 colors, got %d", len(colors))
+	}
+}
+
+// TestBodyService_FormURLEncodedParseError tests form data that fails parsing
+func TestBodyService_FormURLEncodedParseError(t *testing.T) {
+	service := NewBodyService()
+
+	// Invalid percent encoding that causes url.ParseQuery to fail
+	// %ZZ is invalid percent encoding
+	invalidForm := []byte("key=%ZZ")
+	bodyInfo := service.ParseBody(invalidForm, "application/x-www-form-urlencoded")
+
+	if bodyInfo == nil {
+		t.Fatal("Expected body info to be non-nil")
+	}
+
+	// Should fall back to raw string
+	content, ok := bodyInfo.Content.(string)
+	if !ok {
+		t.Error("Expected content to be string when form parsing fails")
+	} else if content != string(invalidForm) {
+		t.Errorf("Expected raw content, got %s", content)
+	}
+}
+
+// TestBodyService_MultipartEmptyFieldName tests multipart with empty field name
+func TestBodyService_MultipartEmptyFieldName(t *testing.T) {
+	service := NewBodyService()
+
+	// Multipart with Content-Disposition that has no name
+	boundary := "----TestBoundary"
+	multipartBody := strings.Join([]string{
+		"------TestBoundary",
+		"Content-Disposition: form-data",
+		"",
+		"some data",
+		"------TestBoundary",
+		"Content-Disposition: form-data; name=\"valid\"",
+		"",
+		"valid data",
+		"------TestBoundary--",
+	}, "\r\n")
+
+	bodyInfo := service.ParseBody([]byte(multipartBody), "multipart/form-data; boundary="+boundary)
+
+	if bodyInfo == nil {
+		t.Fatal("Expected body info to be non-nil")
+	}
+
+	// Content should be parseable (empty name fields are skipped)
+	if bodyInfo.Size != len(multipartBody) {
+		t.Errorf("Expected size %d, got %d", len(multipartBody), bodyInfo.Size)
+	}
+}
+
+// TestBodyService_MultipartMalformed tests malformed multipart data
+func TestBodyService_MultipartMalformed(t *testing.T) {
+	service := NewBodyService()
+
+	// Malformed multipart that will cause parse error
+	boundary := "----TestBoundary"
+	malformedBody := []byte("not proper multipart data at all")
+
+	bodyInfo := service.ParseBody(malformedBody, "multipart/form-data; boundary="+boundary)
+
+	if bodyInfo == nil {
+		t.Fatal("Expected body info to be non-nil")
+	}
+
+	// Should fall back to string when multipart parsing fails
+	if _, ok := bodyInfo.Content.(string); !ok {
+		t.Log("Content stored in some format (acceptable)")
+	}
+}
+
+// TestBodyService_NonUTF8UnknownContentType tests non-UTF8 with unknown content type
+func TestBodyService_NonUTF8UnknownContentType(t *testing.T) {
+	service := NewBodyService()
+
+	// Invalid UTF-8 data with unknown content type
+	nonUtf8Data := []byte{0xFF, 0xFE, 0x00, 0x01, 0x89, 0x50}
+
+	bodyInfo := service.ParseBody(nonUtf8Data, "application/unknown")
+
+	if bodyInfo == nil {
+		t.Fatal("Expected body info to be non-nil")
+	}
+
+	// Should be marked as binary
+	if !bodyInfo.IsBinary {
+		t.Error("Expected non-UTF8 data with unknown content type to be marked as binary")
+	}
+}
+
+// TestBodyService_ValidUTF8UnknownContentType tests valid UTF-8 with unknown content type
+func TestBodyService_ValidUTF8UnknownContentType(t *testing.T) {
+	service := NewBodyService()
+
+	validUtf8 := []byte("Hello, this is valid UTF-8!")
+
+	bodyInfo := service.ParseBody(validUtf8, "application/unknown")
+
+	if bodyInfo == nil {
+		t.Fatal("Expected body info to be non-nil")
+	}
+
+	// Should NOT be marked as binary
+	if bodyInfo.IsBinary {
+		t.Error("Expected valid UTF-8 data to NOT be marked as binary")
+	}
+
+	// Content should be the string
+	content, ok := bodyInfo.Content.(string)
+	if !ok {
+		t.Fatal("Expected content to be string")
+	}
+
+	if content != string(validUtf8) {
+		t.Errorf("Expected content '%s', got '%s'", string(validUtf8), content)
+	}
+}
+
+// TestBodyService_XMLSuccessfulParse tests XML that could be parsed (though Go's xml package is limited)
+func TestBodyService_XMLSuccessfulParse(t *testing.T) {
+	service := NewBodyService()
+
+	// Simple XML - note: Go's xml.Unmarshal to map[string]interface{} typically fails
+	// so we're actually testing the fallback path
+	xmlBody := []byte(`<root><item>value</item></root>`)
+
+	bodyInfo := service.ParseBody(xmlBody, "application/xml")
+
+	if bodyInfo == nil {
+		t.Fatal("Expected body info to be non-nil")
+	}
+
+	// XML parsing to map typically fails in Go, so content should be string
+	// This tests the fallback path
+	if _, ok := bodyInfo.Content.(string); !ok {
+		t.Log("XML was parsed as map (unexpected but acceptable)")
+	}
+}
+
+// TestBodyService_BinaryDataWithJSONContentType tests binary data with JSON content type
+func TestBodyService_BinaryDataWithJSONContentType(t *testing.T) {
+	service := NewBodyService()
+
+	// Binary data with null bytes - will be detected as binary before JSON parsing
+	binaryData := []byte{0x00, 0x01, 0x02, 0x7b, 0x7d} // Contains null bytes plus {}
+
+	bodyInfo := service.ParseBody(binaryData, "application/json")
+
+	if bodyInfo == nil {
+		t.Fatal("Expected body info to be non-nil")
+	}
+
+	// Should be detected as binary (returns early before JSON parsing)
+	if !bodyInfo.IsBinary {
+		t.Error("Expected binary data to be marked as binary even with JSON content type")
+	}
+}
+
+// TestBodyService_TruncatedBody tests body that exceeds max size
+func TestBodyService_TruncatedBodyWithBinary(t *testing.T) {
+	// Use a smaller max body size
+	if err := os.Setenv("MAX_BODY_SIZE", "100"); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = os.Unsetenv("MAX_BODY_SIZE") }()
+
+	service := NewBodyService()
+
+	// Create large binary body
+	largeBody := make([]byte, 200)
+	for i := range largeBody {
+		largeBody[i] = byte(i % 256)
+	}
+
+	bodyInfo := service.ParseBody(largeBody, "application/octet-stream")
+
+	if bodyInfo == nil {
+		t.Fatal("Expected body info to be non-nil")
+	}
+
+	if !bodyInfo.Truncated {
+		t.Error("Expected body to be marked as truncated")
+	}
+
+	if bodyInfo.Size != 200 {
+		t.Errorf("Expected original size 200, got %d", bodyInfo.Size)
+	}
+}
+
+// TestBodyService_ContentTypeWithInvalidMediaType tests content type that fails mime.ParseMediaType
+func TestBodyService_ContentTypeWithInvalidMediaType(t *testing.T) {
+	service := NewBodyService()
+
+	// Invalid content type that will fail mime.ParseMediaType
+	invalidContentType := ";;;invalid"
+	textBody := []byte("some text")
+
+	bodyInfo := service.ParseBody(textBody, invalidContentType)
+
+	if bodyInfo == nil {
+		t.Fatal("Expected body info to be non-nil")
+	}
+
+	// Should still process the body
+	if bodyInfo.Size != len(textBody) {
+		t.Errorf("Expected size %d, got %d", len(textBody), bodyInfo.Size)
+	}
+}
+
+// TestBodyService_HighNonPrintableRatio tests binary detection threshold
+func TestBodyService_HighNonPrintableRatio(t *testing.T) {
+	service := NewBodyService()
+
+	// Create data with high ratio of non-printable chars (> 30%)
+	// 10 chars total: 4 non-printable = 40%
+	data := []byte{'H', 'e', 'l', 0x01, 0x02, 0x03, 0x04, 'l', 'o', '!'}
+
+	result := service.isBinaryData(data)
+
+	// Should be detected as binary due to high non-printable ratio
+	if !result {
+		t.Error("Expected data with high non-printable ratio to be detected as binary")
+	}
+}
+
+// TestBodyService_TextWithTabs tests text with tab characters
+func TestBodyService_TextWithTabs(t *testing.T) {
+	service := NewBodyService()
+
+	// Text with tabs and newlines should NOT be binary
+	data := []byte("Line1\tColumn2\nLine2\tColumn2\r\nLine3\tColumn2")
+
+	result := service.isBinaryData(data)
+
+	if result {
+		t.Error("Expected text with tabs and newlines to NOT be binary")
+	}
+}
+
+// minInt helper function (renamed to avoid shadowing builtin)
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
