@@ -17,14 +17,14 @@ jobs:
       - name: Greet first-time contributors
         uses: actions/first-interaction@v3
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          issue-message: |
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          issue_message: |
             👋 Thanks for opening your first issue in the echo-server repository!
 
             I appreciate your contribution and will review your issue as soon as possible.
 
             Please make sure you've provided all the necessary information to help us understand and reproduce the issue.
-          pr-message: |
+          pr_message: |
             🎉 Congratulations on your first pull request to the echo-server repository!
 
             Thank you for taking the time to contribute! We really appreciate your effort.
