@@ -1,0 +1,105 @@
+# Pre-commit hooks for echo-server
+# See https://pre-commit.com for more information
+# Installation: pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(.*\.md|.*\.html)$
+      - id: end-of-file-fixer
+        exclude: ^(.*\.html|tmp/)
+      - id: check-yaml
+        args: ["--unsafe"] # Allow custom YAML tags
+      - id: check-added-large-files
+        args: ["--maxkb=1000"]
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+      - id: detect-private-key
+        exclude: ^deploy/.*\.yaml$ # Exclude deployment files with example certificates
+
+  # Go-specific hooks
+  - repo: local
+    hooks:
+      # Format code with gofmt
+      - id: go-fmt
+        name: go fmt
+        entry: gofmt -w -s
+        language: system
+        files: \.go$
+        pass_filenames: true
+
+      # Run go mod tidy
+      - id: go-mod-tidy
+        name: go mod tidy
+        entry: bash -c 'go mod tidy'
+        language: system
+        files: go\.(mod|sum)$
+        pass_filenames: false
+
+      # Run golangci-lint
+      - id: golangci-lint
+        name: golangci-lint
+        entry: bash -c 'go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run --fix'
+        language: system
+        types: [go]
+        pass_filenames: false
+
+      # Run go vet
+      - id: go-vet
+        name: go vet
+        entry: bash -c 'go vet ./...'
+        language: system
+        types: [go]
+        pass_filenames: false
+
+  # Commit message linting
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.3.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: []
+
+  # Dockerfile linting
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.14.0
+    hooks:
+      - id: hadolint-docker
+        args: ["--ignore", "DL3018"] # Ignore pinning versions in apk
+
+  # YAML linting
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.38.0
+    hooks:
+      - id: yamllint
+        args:
+          [
+            "-d",
+            "{extends: default, rules: {line-length: disable, document-start: disable, comments: disable, truthy: disable}}",
+          ]
+
+  # Markdown linting
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.47.0
+    hooks:
+      - id: markdownlint
+        args: ["--fix", "--disable", "MD013", "MD033", "MD041"]
+        exclude: ^(CHANGELOG\.md)$
+
+  # Security checks
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
+        exclude: ^(go\.sum|deploy/.*\.yaml)$ # Exclude go.sum and deployment files with example certs
+
+# Configuration
+default_stages: [pre-commit]
+fail_fast: false

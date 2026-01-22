@@ -1,0 +1,319 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run Server",
+      "type": "shell",
+      "command": "task",
+      "args": [
+        "run"
+      ],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": [
+        "$go"
+      ]
+    },
+    {
+      "label": "Dev (Hot Reload)",
+      "type": "shell",
+      "command": "task",
+      "args": [
+        "dev"
+      ],
+      "group": "build",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": {
+        "owner": "go",
+        "fileLocation": [
+          "relative",
+          "${workspaceFolder}"
+        ],
+        "pattern": {
+          "regexp": "^(.+):(\\d+):(\\d+):\\s+(.+)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "message": 4
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*building.*$",
+          "endsPattern": "^.*running.*$"
+        }
+      }
+    },
+    {
+      "label": "Build",
+      "type": "shell",
+      "command": "task",
+      "args": [
+        "build"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      },
+      "problemMatcher": [
+        "$go"
+      ]
+    },
+    {
+      "label": "Build Optimized",
+      "type": "shell",
+      "command": "task",
+      "args": [
+        "build-optimized"
+      ],
+      "group": "build",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      },
+      "problemMatcher": [
+        "$go"
+      ]
+    },
+    {
+      "label": "Test",
+      "type": "shell",
+      "command": "task",
+      "args": [
+        "test"
+      ],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": [
+        "$go"
+      ]
+    },
+    {
+      "label": "Test with Coverage",
+      "type": "shell",
+      "command": "task",
+      "args": [
+        "test-coverage"
+      ],
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": [
+        "$go"
+      ]
+    },
+    {
+      "label": "Test with Race Detection",
+      "type": "shell",
+      "command": "task",
+      "args": [
+        "test-race"
+      ],
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": [
+        "$go"
+      ]
+    },
+    {
+      "label": "Lint",
+      "type": "shell",
+      "command": "task",
+      "args": [
+        "lint"
+      ],
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": [
+        "$go"
+      ]
+    },
+    {
+      "label": "Lint Fix",
+      "type": "shell",
+      "command": "task",
+      "args": [
+        "lint-fix"
+      ],
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": [
+        "$go"
+      ]
+    },
+    {
+      "label": "Format",
+      "type": "shell",
+      "command": "task",
+      "args": [
+        "fmt"
+      ],
+      "group": "build",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Security Check",
+      "type": "shell",
+      "command": "task",
+      "args": [
+        "security"
+      ],
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Pre-commit Checks",
+      "type": "shell",
+      "command": "task",
+      "args": [
+        "pre-commit-run"
+      ],
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": [
+        "$go"
+      ]
+    },
+    {
+      "label": "CI Checks",
+      "type": "shell",
+      "command": "task",
+      "args": [
+        "ci"
+      ],
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": [
+        "$go"
+      ]
+    },
+    {
+      "label": "Docker Build",
+      "type": "shell",
+      "command": "task",
+      "args": [
+        "docker-build"
+      ],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Docker Run",
+      "type": "shell",
+      "command": "task",
+      "args": [
+        "docker-run"
+      ],
+      "group": "build",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Clean",
+      "type": "shell",
+      "command": "task",
+      "args": [
+        "clean"
+      ],
+      "group": "build",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Setup (First Time)",
+      "type": "shell",
+      "command": "task",
+      "args": [
+        "setup"
+      ],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "View Coverage Report",
+      "type": "shell",
+      "command": "task",
+      "args": [
+        "coverage-view"
+      ],
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Benchmarks",
+      "type": "shell",
+      "command": "task",
+      "args": [
+        "bench"
+      ],
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

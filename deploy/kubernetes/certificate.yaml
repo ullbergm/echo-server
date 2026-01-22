@@ -12,35 +12,35 @@ metadata:
     app: echo-server
 spec:
   # Secret name where certificate will be stored
-  secretName: echo-server-tls
-  
+  secretName: echo-server-tls # pragma: allowlist secret
+
   # Duration before the certificate expires (default: 90 days)
   duration: 2160h # 90 days
-  
+
   # Duration before renewal (default: 30 days before expiry)
   renewBefore: 360h # 15 days
-  
+
   # Subject configuration
   subject:
     organizations:
       - Echo Server
-  
+
   # Common Name (CN) for the certificate
   commonName: echo-server.example.com
-  
+
   # DNS names the certificate is valid for
   dnsNames:
     - echo-server.example.com
     - echo-server
     - echo-server.default.svc.cluster.local
-  
+
   # Reference to the Issuer (replace with your issuer)
   issuerRef:
     name: letsencrypt-prod
     kind: ClusterIssuer
     # Or use a namespace-scoped Issuer:
     # kind: Issuer
-  
+
   # Private key configuration
   privateKey:
     algorithm: RSA

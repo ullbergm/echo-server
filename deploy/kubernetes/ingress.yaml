@@ -5,26 +5,26 @@ metadata:
   name: echo-server
   labels:
     app: echo-server
-  # Optional annotations for cert-manager automatic certificate provisioning
-  # annotations:
-  #   cert-manager.io/cluster-issuer: "letsencrypt-prod"
-  #   # Or use a namespace-scoped issuer:
-  #   # cert-manager.io/issuer: "letsencrypt-prod"
+    # Optional annotations for cert-manager automatic certificate provisioning
+    # annotations:
+    #   cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    #   # Or use a namespace-scoped issuer:
+    #   # cert-manager.io/issuer: "letsencrypt-prod"
 spec:
   ingressClassName: nginx
   # TLS configuration
   tls:
-  - hosts:
-    - echo.example.com
-    secretName: echo-server-tls  # Certificate secret (created by cert-manager or manually)
+    - hosts:
+        - echo.example.com
+      secretName: echo-server-tls # pragma: allowlist secret
   rules:
-  - host: echo.example.com
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: echo-server
-            port:
-              number: 8080
+    - host: echo.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: echo-server
+                port:
+                  number: 8080

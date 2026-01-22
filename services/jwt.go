@@ -113,8 +113,8 @@ func (s *JWTService) decodeBase64URL(input string) (map[string]interface{}, erro
 
 	// Parse JSON
 	var result map[string]interface{}
-	if err := json.Unmarshal(decoded, &result); err != nil {
-		return nil, err
+	if unmarshalErr := json.Unmarshal(decoded, &result); unmarshalErr != nil {
+		return nil, unmarshalErr
 	}
 
 	return result, nil

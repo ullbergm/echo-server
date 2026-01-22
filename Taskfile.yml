@@ -1,0 +1,489 @@
+version: "3"
+
+vars:
+  VERSION:
+    sh: git describe --tags --abbrev=0 2>/dev/null || echo "dev"
+  LDFLAGS: -ldflags "-X main.Version={{.VERSION}}"
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+    silent: true
+
+  build:
+    desc: Build the application
+    cmds:
+      - echo "Building echo-server version {{.VERSION}}..."
+      - go build {{.LDFLAGS}} -o echo-server
+
+  build-optimized:
+    desc: Build with optimizations (smaller binary)
+    cmds:
+      - echo "Building optimized echo-server version {{.VERSION}}..."
+      - go build {{.LDFLAGS}} -ldflags="-s -w" -o echo-server
+
+  run:
+    desc: Run the application in development mode
+    cmds:
+      - echo "Running echo-server version {{.VERSION}}..."
+      - go run {{.LDFLAGS}} main.go
+
+  dev:
+    desc: Run with hot reload (requires air)
+    cmds:
+      - echo "Starting development server with hot reload..."
+      - go run github.com/air-verse/air@latest
+
+  test:
+    desc: Run all tests
+    cmds:
+      - go test ./...
+
+  test-coverage:
+    desc: Run tests with coverage report
+    cmds:
+      - go test -cover ./...
+
+  test-race:
+    desc: Run tests with race detection
+    cmds:
+      - echo "Running tests with race detection..."
+      - CGO_ENABLED=1 go test -race ./...
+
+  test-verbose:
+    desc: Run tests with verbose output
+    cmds:
+      - echo "Running tests with verbose output..."
+      - go test -v ./...
+
+  coverage:
+    desc: Generate test coverage report
+    cmds:
+      - echo "Generating coverage report..."
+      - go test -coverprofile=coverage.out ./...
+      - go tool cover -html=coverage.out -o coverage.html
+      - echo "Coverage report generated at coverage.html"
+
+  coverage-view:
+    desc: Generate and open coverage report in browser
+    deps:
+      - coverage
+    cmds:
+      - echo "Opening coverage report in browser..."
+      - |
+        if command -v open > /dev/null; then
+          open coverage.html
+        elif command -v xdg-open > /dev/null; then
+          xdg-open coverage.html
+        elif command -v start > /dev/null; then
+          start coverage.html
+        else
+          echo "Please open coverage.html manually"
+        fi
+
+  bench:
+    desc: Run benchmarks
+    cmds:
+      - echo "Running benchmarks..."
+      - go test -bench=. -benchmem ./...
+
+  lint:
+    desc: Run linter
+    cmds:
+      - echo "Running golangci-lint..."
+      - go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run
+
+  lint-fix:
+    desc: Fix linting issues automatically
+    cmds:
+      - echo "Running golangci-lint with fixes..."
+      - go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run --fix
+
+  fmt:
+    desc: Format code
+    cmds:
+      - go fmt ./...
+
+  security:
+    desc: Check for security issues
+    cmds:
+      - echo "Running security checks..."
+      - go run github.com/securego/gosec/v2/cmd/gosec@latest ./...
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -f echo-server echo-server.exe coverage.out coverage.html
+
+  version:
+    desc: Show current version
+    cmds:
+      - echo "{{.VERSION}}"
+    silent: true
+
+  pre-commit:
+    desc: Run all pre-commit checks (fmt, lint, test)
+    deps:
+      - fmt
+      - lint
+      - test
+    cmds:
+      - echo "✓ All pre-commit checks passed!"
+
+  docker-build:
+    desc: Build Docker image
+    cmds:
+      - echo "Building Docker image version {{.VERSION}}..."
+      - docker build -t echo-server:{{.VERSION}} -t echo-server:latest .
+
+  docker-run:
+    desc: Run Docker container for local testing
+    cmds:
+      - echo "Running Docker container..."
+      - docker run -it --rm -p 8080:8080 -p 8443:8443 echo-server:latest
+
+  docker-all:
+    desc: Build and run Docker container
+    deps:
+      - docker-build
+    cmds:
+      - task docker-run
+
+  deps-check:
+    desc: Check dependencies for updates
+    cmds:
+      - echo "Checking for dependency updates..."
+      - go list -u -m all
+
+  deps-update:
+    desc: Update dependencies
+    cmds:
+      - echo "Updating dependencies..."
+      - go get -u ./...
+      - go mod tidy
+
+  deps-verify:
+    desc: Verify dependencies
+    cmds:
+      - echo "Verifying dependencies..."
+      - go mod verify
+
+  ci:
+    desc: Run CI checks (fmt, lint, test, build)
+    deps:
+      - fmt
+      - lint
+      - test
+      - build
+    cmds:
+      - echo "✓ All CI checks passed!"
+
+  install:
+    desc: Install the echo-server binary to $GOPATH/bin
+    cmds:
+      - echo "Installing echo-server version {{.VERSION}}..."
+      - go install {{.LDFLAGS}}
+
+  pre-commit-install:
+    desc: Install pre-commit hooks
+    cmds:
+      - echo "Installing pre-commit hooks..."
+      - |
+        if ! command -v pre-commit &> /dev/null; then
+          echo "❌ pre-commit is not installed"
+          echo ""
+          echo "Please install pre-commit first:"
+          echo "  • pip install pre-commit"
+          echo "  • brew install pre-commit (macOS)"
+          echo "  • conda install -c conda-forge pre-commit"
+          echo ""
+          echo "More info: https://pre-commit.com/#install"
+          exit 1
+        fi
+      - pre-commit install
+      - pre-commit install --hook-type commit-msg
+      - echo "✓ Pre-commit hooks installed!"
+
+  pre-commit-uninstall:
+    desc: Uninstall pre-commit hooks
+    cmds:
+      - echo "Uninstalling pre-commit hooks..."
+      - pre-commit uninstall
+      - pre-commit uninstall --hook-type commit-msg
+      - echo "✓ Pre-commit hooks uninstalled!"
+
+  pre-commit-run:
+    desc: Run pre-commit hooks on all files
+    cmds:
+      - echo "Running pre-commit hooks on all files..."
+      - pre-commit run --all-files
+
+  pre-commit-update:
+    desc: Update pre-commit hook versions
+    cmds:
+      - echo "Updating pre-commit hooks..."
+      - pre-commit autoupdate
+      - echo "✓ Pre-commit hooks updated!"
+
+  commit-lint:
+    desc: Validate commit message format (requires Node.js)
+    cmds:
+      - |
+        if ! command -v npx &> /dev/null; then
+          echo "⚠️  Node.js/npx not found. Skipping commit message validation."
+          echo ""
+          echo "To enable commit message validation:"
+          echo "  • Install Node.js: https://nodejs.org/"
+          echo "  • Or in devcontainer: bash .devcontainer/install-npm-tools.sh"
+          echo ""
+          echo "Commit messages will be validated by pre-commit hook if installed."
+          exit 0
+        fi
+        echo ""
+        echo "Usage: echo 'your commit message' | npx @commitlint/cli --config .commitlintrc.yml"
+        echo ""
+        echo "Example:"
+        echo "  echo 'feat(api): add new endpoint' | npx @commitlint/cli --config .commitlintrc.yml"
+        echo ""
+        echo "Or validate the last commit:"
+        echo "  git log -1 --pretty=%B | npx @commitlint/cli --config .commitlintrc.yml"
+        echo ""
+        echo "Note: Commit messages are auto-validated by pre-commit hook on 'git commit'"
+
+  help:
+    desc: Show detailed help information
+    cmds:
+      - |
+        echo "Echo Server Task Commands"
+        echo "=========================="
+        echo ""
+        echo "Quick Start:"
+        echo "  task run              - Run the server locally"
+        echo "  task dev              - Run with hot reload"
+        echo "  task test             - Run tests"
+        echo "  task build            - Build binary"
+        echo ""
+        echo "Development:"
+        echo "  task test-coverage    - Run tests with coverage"
+        echo "  task test-race        - Run tests with race detection"
+        echo "  task coverage-view    - Generate and open coverage report"
+        echo "  task lint             - Run linter"
+        echo "  task fmt              - Format code"
+        echo ""
+        echo "Pre-commit Hooks:"
+        echo "  task pre-commit-install   - Install pre-commit hooks"
+        echo "  task pre-commit-run       - Run hooks on all files"
+        echo "  task pre-commit-update    - Update hook versions"
+        echo "  task commit-lint          - Validate commit message"
+        echo ""
+        echo "Docker:"
+        echo "  task docker-build     - Build Docker image"
+        echo "  task docker-run       - Run Docker container"
+        echo "  task docker-all       - Build and run Docker"
+        echo ""
+        echo "Setup:"
+        echo "  task setup            - First-time setup verification"
+        echo ""
+        echo "For all available commands, run: task --list"
+    silent: true
+
+  setup:
+    desc: First-time setup - verify environment and install dependencies
+    cmds:
+      - |
+        echo "🔍 Echo Server Development Setup"
+        echo "=================================="
+        echo ""
+
+        # Check Go version
+        echo "📦 Checking Go installation..."
+        if command -v go &> /dev/null; then
+          GO_VERSION=$(go version | awk '{print $3}')
+          echo "   ✓ Go installed: $GO_VERSION"
+        else
+          echo "   ❌ Go not found. Please install Go 1.25+: https://go.dev/dl/"
+          exit 1
+        fi
+
+        # Check Task version
+        echo "📦 Checking Task installation..."
+        if command -v task &> /dev/null; then
+          TASK_VERSION=$(task --version 2>&1 | head -1)
+          echo "   ✓ Task installed: $TASK_VERSION"
+        else
+          echo "   ❌ Task not found. Please install: https://taskfile.dev/installation/"
+          exit 1
+        fi
+
+        # Check Docker (optional)
+        echo "📦 Checking Docker installation..."
+        if command -v docker &> /dev/null; then
+          DOCKER_VERSION=$(docker --version 2>&1)
+          echo "   ✓ Docker installed: $DOCKER_VERSION"
+        else
+          echo "   ⚠️  Docker not found (optional for container testing)"
+        fi
+
+        # Check Git
+        echo "📦 Checking Git installation..."
+        if command -v git &> /dev/null; then
+          GIT_VERSION=$(git --version)
+          echo "   ✓ Git installed: $GIT_VERSION"
+        else
+          echo "   ❌ Git not found. Please install: https://git-scm.com/downloads"
+          exit 1
+        fi
+
+        echo ""
+        echo "🔧 Verifying Go dependencies..."
+        go mod download
+        go mod verify
+        echo "   ✓ Dependencies verified"
+
+        echo ""
+        echo "🧪 Running quick test..."
+        if go test ./... -count=1 -short > /dev/null 2>&1; then
+          echo "   ✓ Tests passing"
+        else
+          echo "   ⚠️  Some tests failed. Run 'task test-verbose' for details."
+        fi
+
+        echo ""
+        echo "🏗️  Testing build..."
+        if go build -o /tmp/echo-server-test . > /dev/null 2>&1; then
+          rm -f /tmp/echo-server-test
+          echo "   ✓ Build successful"
+        else
+          echo "   ❌ Build failed. Check for errors."
+          exit 1
+        fi
+
+        # Check pre-commit (optional)
+        echo ""
+        echo "📦 Checking pre-commit installation..."
+        if command -v pre-commit &> /dev/null; then
+          PRECOMMIT_VERSION=$(pre-commit --version)
+          echo "   ✓ pre-commit installed: $PRECOMMIT_VERSION"
+
+          # Check if hooks are installed
+          if [ -f ".git/hooks/pre-commit" ]; then
+            echo "   ✓ Pre-commit hooks installed"
+          else
+            echo "   ⚠️  Pre-commit hooks not installed. Run 'task pre-commit-install'"
+          fi
+        else
+          echo "   ⚠️  pre-commit not found (optional but recommended)"
+          echo "      Install with: pip install pre-commit"
+        fi
+
+        echo ""
+        echo "=========================================="
+        echo "✅ Setup verification complete!"
+        echo ""
+        echo "Quick start commands:"
+        echo "  task run    - Start the server"
+        echo "  task dev    - Start with hot reload"
+        echo "  task test   - Run tests"
+        echo "  task help   - Show all commands"
+        echo ""
+        echo "Happy coding! 🎉"
+    silent: true
+
+  doctor:
+    desc: Diagnose common development environment issues
+    cmds:
+      - |
+        echo "🩺 Echo Server Development Environment Diagnostics"
+        echo "==================================================="
+        echo ""
+
+        ISSUES=0
+
+        # Check Go version meets minimum
+        echo "📦 Go Version Check..."
+        if command -v go &> /dev/null; then
+          GO_VERSION=$(go version | grep -oP 'go\d+\.\d+' | sed 's/go//')
+          MAJOR=$(echo $GO_VERSION | cut -d. -f1)
+          MINOR=$(echo $GO_VERSION | cut -d. -f2)
+          if [ "$MAJOR" -ge 1 ] && [ "$MINOR" -ge 21 ]; then
+            echo "   ✓ Go version $GO_VERSION (meets minimum 1.21)"
+          else
+            echo "   ❌ Go version $GO_VERSION (requires 1.21+)"
+            ISSUES=$((ISSUES+1))
+          fi
+        else
+          echo "   ❌ Go not installed"
+          ISSUES=$((ISSUES+1))
+        fi
+
+        # Check CGO for race detection
+        echo "📦 CGO Status..."
+        if [ "$CGO_ENABLED" = "1" ] || [ -z "$CGO_ENABLED" ]; then
+          echo "   ✓ CGO enabled (race detection available)"
+        else
+          echo "   ⚠️  CGO disabled (set CGO_ENABLED=1 for race detection)"
+        fi
+
+        # Check module mode
+        echo "📦 Go Modules..."
+        if [ -f "go.mod" ]; then
+          echo "   ✓ go.mod found"
+          if go mod verify > /dev/null 2>&1; then
+            echo "   ✓ Dependencies verified"
+          else
+            echo "   ❌ Dependency verification failed. Run 'go mod tidy'"
+            ISSUES=$((ISSUES+1))
+          fi
+        else
+          echo "   ❌ go.mod not found"
+          ISSUES=$((ISSUES+1))
+        fi
+
+        # Check for common port conflicts
+        echo "📦 Port Availability..."
+        if command -v lsof &> /dev/null; then
+          if lsof -i :8080 > /dev/null 2>&1; then
+            echo "   ⚠️  Port 8080 is in use"
+          else
+            echo "   ✓ Port 8080 available"
+          fi
+          if lsof -i :8443 > /dev/null 2>&1; then
+            echo "   ⚠️  Port 8443 is in use"
+          else
+            echo "   ✓ Port 8443 available"
+          fi
+        else
+          echo "   ⚠️  Cannot check ports (lsof not available)"
+        fi
+
+        # Check template files
+        echo "📦 Template Files..."
+        if [ -f "templates/echo.html" ]; then
+          echo "   ✓ Echo template found"
+        else
+          echo "   ❌ templates/echo.html missing"
+          ISSUES=$((ISSUES+1))
+        fi
+
+        # Check for stale build artifacts
+        echo "📦 Build Artifacts..."
+        if [ -f "echo-server" ]; then
+          BINARY_AGE=$(find echo-server -mmin +60 2>/dev/null | wc -l)
+          if [ "$BINARY_AGE" -gt 0 ]; then
+            echo "   ⚠️  Binary older than 1 hour. Consider 'task build'"
+          else
+            echo "   ✓ Binary is recent"
+          fi
+        else
+          echo "   ℹ️  No binary (run 'task build')"
+        fi
+
+        echo ""
+        if [ $ISSUES -eq 0 ]; then
+          echo "✅ No issues found! Environment looks healthy."
+        else
+          echo "⚠️  Found $ISSUES issue(s). Please address them above."
+        fi
+    silent: true

@@ -44,18 +44,22 @@ The echo server provides the following capabilities:
 
 ## Build & Test Commands
 
-All commands should be executed from the repository root:
+All commands should be executed from the repository root using Task (Taskfile.yml).
+
+**Note:** The Taskfile uses `go run <package>@latest` for tools like golangci-lint, gosec, and air.
+This ensures consistent versions across all developers and CI without requiring manual tool installation.
+The tools are automatically downloaded and cached by Go when first used.
 
 ### Development
 ```bash
 # Run in development mode
-go run main.go
+task run
 
-# Run with custom port
+# Run with hot reload
+task dev
+
+# Run with custom port (using go run directly)
 go run main.go -port 8087
-
-# Run with air for hot reload (if installed)
-air
 
 # Access the application at http://localhost:8080
 ```
@@ -63,33 +67,69 @@ air
 ### Testing
 ```bash
 # Run all tests
-go test ./...
+task test
 
 # Run tests with coverage
-go test -cover ./...
+task test-coverage
 
 # Run tests with verbose output
-go test -v ./...
+task test-verbose
+
+# Run tests with race detection
+task test-race
+
+# Generate and view coverage report
+task coverage-view
+
+# Or use go commands directly
+go test ./...
+go test -cover ./...
 ```
 
 ### Building
 ```bash
-# Build binary
-go build -o echo-server
+# Build binary (with version from git)
+task build
 
 # Build with optimizations (smaller binary)
-go build -ldflags="-s -w" -o echo-server
+task build-optimized
 
-# Cross-compile for Linux
+# Check current version
+task version
+
+# Or use go commands directly
+go build -o echo-server
 GOOS=linux GOARCH=amd64 go build -o echo-server-linux
+```
+
+### Linting & Security
+```bash
+# Run linter (requires golangci-lint installed)
+task lint
+
+# Fix linting issues automatically
+task lint-fix
+
+# Run security checks (requires gosec installed)
+task security
+
+# Tools are run via 'go run <package>@latest' for consistency
+# No manual installation required - Go handles it automatically
 ```
 
 ### Docker
 ```bash
-# Build Docker image
-docker build -t echo-server:latest .
+# Build Docker image (with version from git)
+task docker-build
 
 # Run container
+task docker-run
+
+# Build and run
+task docker-all
+
+# Or use docker commands directly
+docker build -t echo-server:latest .
 docker run -i --rm -p 8080:8080 echo-server:latest
 ```
 
@@ -98,6 +138,8 @@ docker run -i --rm -p 8080:8080 echo-server:latest
 ```
 echo-server/
 ├── README.md                    # Main user documentation
+├── Taskfile.yml                 # Task runner configuration (preferred over Makefile)
+├── Makefile                     # Legacy make commands (deprecated)
 ├── kubernetes-deployment.yaml   # K8s deployment manifest
 ├── Dockerfile                   # Multi-stage build
 ├── go.mod                       # Go module dependencies

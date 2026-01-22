@@ -1,0 +1,157 @@
+# Commitlint configuration for echo-server
+# See https://commitlint.js.org for more information
+
+# Use conventional commits standard
+extends:
+  - "@commitlint/config-conventional"
+
+# Custom rules
+rules:
+  # Type enum - allowed commit types
+  type-enum:
+    - 2
+    - always
+    - - feat # New feature
+      - fix # Bug fix
+      - docs # Documentation only changes
+      - style # Changes that don't affect code meaning (formatting, etc)
+      - refactor # Code change that neither fixes a bug nor adds a feature
+      - perf # Performance improvement
+      - test # Adding or updating tests
+      - build # Changes to build system or dependencies
+      - ci # Changes to CI configuration files and scripts
+      - chore # Other changes that don't modify src or test files
+      - revert # Reverts a previous commit
+
+  # Scope enum - allowed scopes (optional but recommended)
+  scope-enum:
+    - 2
+    - always
+    - - api # API/endpoint changes
+      - handlers # Handler functions
+      - services # Service layer
+      - models # Data models
+      - docker # Docker-related changes
+      - k8s # Kubernetes configurations
+      - metrics # Prometheus metrics
+      - jwt # JWT token handling
+      - tls # TLS/HTTPS functionality
+      - templates # HTML templates
+      - deps # Dependency updates
+      - config # Configuration changes
+      - docs # Documentation
+      - tests # Testing
+      - ci # CI/CD
+      - devex # Developer experience
+
+  # Subject and body rules
+  subject-case:
+    - 0 # Disable subject-case to allow acronyms like PR, API, CI, etc.
+  subject-empty:
+    - 2
+    - never
+  subject-full-stop:
+    - 2
+    - never
+    - "."
+  subject-min-length:
+    - 2
+    - always
+    - 10
+  subject-max-length:
+    - 2
+    - always
+    - 100
+  header-max-length:
+    - 2
+    - always
+    - 120
+  body-max-line-length:
+    - 2
+    - always
+    - 100
+  body-leading-blank:
+    - 1
+    - always
+  footer-leading-blank:
+    - 1
+    - always
+
+# Help message
+helpUrl: "https://github.com/conventional-changelog/commitlint/#what-is-commitlint"
+
+# Prompt configuration
+prompt:
+  messages:
+    skip: "Press enter to skip"
+    max: "upper %d chars"
+    min: "%d chars at least"
+    emptyWarning: "can not be empty"
+    upperLimitWarning: "over limit"
+    lowerLimitWarning: "below limit"
+  questions:
+    type:
+      description: "Select the type of change that you're committing"
+      enum:
+        feat:
+          description: A new feature
+          title: Features
+          emoji: ✨
+        fix:
+          description: A bug fix
+          title: Bug Fixes
+          emoji: 🐛
+        docs:
+          description: Documentation only changes
+          title: Documentation
+          emoji: 📚
+        style:
+          description: Changes that don't affect code meaning (formatting, etc)
+          title: Styles
+          emoji: 💎
+        refactor:
+          description: Code change that neither fixes a bug nor adds a feature
+          title: Code Refactoring
+          emoji: 📦
+        perf:
+          description: Performance improvement
+          title: Performance Improvements
+          emoji: 🚀
+        test:
+          description: Adding or updating tests
+          title: Tests
+          emoji: 🚨
+        build:
+          description: Changes to build system or dependencies
+          title: Builds
+          emoji: 🛠
+        ci:
+          description: Changes to CI configuration
+          title: Continuous Integrations
+          emoji: ⚙️
+        chore:
+          description: Other changes that don't modify src or test files
+          title: Chores
+          emoji: ♻️
+        revert:
+          description: Reverts a previous commit
+          title: Reverts
+          emoji: 🗑
+    scope:
+      description: What is the scope of this change (e.g., component, file name)
+    subject:
+      description: Write a short, imperative tense description of the change
+    body:
+      description: Provide a longer description of the change
+    isBreaking:
+      description: Are there any breaking changes?
+    breakingBody:
+      description: A BREAKING CHANGE commit requires a body. Please enter details
+    breaking:
+      description: Describe the breaking changes
+    isIssueAffected:
+      description: Does this change affect any open issues?
+    issuesBody:
+      description: If issues are closed, the commit requires a body. Please enter details
+    issues:
+      description: Add issue references (e.g., "fix #123", "re #456")

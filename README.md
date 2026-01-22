@@ -41,21 +41,21 @@ docker run -p 8080:8080 -p 8443:8443 \
   echo-server:latest
 ```
 
-Then open http://localhost:8080 (or https://localhost:8443) in your browser!
+Then open <http://localhost:8080> (or <https://localhost:8443>) in your browser!
 
 **Try the Interactive Request Builder:** Visit http://localhost:8080/builder for a modern web UI to build and test HTTP requests visually.
 
 ### Run Locally
 
 ```bash
-# Using Make (recommended)
-make run
+# Using Task (recommended)
+task run
 
 # Or directly with go run
 go run main.go
 
 # Or build with version
-make build
+task build
 ./echo-server
 ```
 
@@ -63,22 +63,214 @@ make build
 
 ```bash
 # Build with automatic version from git tags
-make build
+task build
 
 # Or manually specify version
 go build -ldflags "-X main.Version=1.0.0" -o echo-server
 
 # Build optimized (smaller binary)
-make build-optimized
+task build-optimized
 ```
 
 The version is automatically injected at build time from git tags/commits. If not in a git repository, it defaults to "dev".
+
+### Pre-commit Hooks
+
+This project uses [pre-commit](https://pre-commit.com/) to ensure code quality before commits:
+
+**Installation:**
+
+```bash
+# Install pre-commit
+pip install pre-commit
+# Or on macOS:
+brew install pre-commit
+
+# Install the git hooks
+task pre-commit-install
+```
+
+**Usage:**
+
+```bash
+# Hooks run automatically on git commit
+git commit -m "feat(api): add new endpoint"
+
+# Run hooks manually on all files
+task pre-commit-run
+
+# Update hook versions
+task pre-commit-update
+
+# Skip hooks (not recommended)
+git commit --no-verify -m "message"
+```
+
+**What hooks run:**
+
+- Code formatting (gofmt)
+- Linting (golangci-lint)
+- YAML/Markdown linting
+- Dockerfile linting (hadolint)
+- Commit message validation (conventional commits)
+- Secret detection
+- Trailing whitespace and file endings
+
+**CI/CD Integration:**
+
+All pre-commit hooks are automatically run in GitHub Actions workflows:
+
+- **Code Quality workflow** - Runs on all pushes and PRs
+- **Pre-commit workflow** - Dedicated workflow for all pre-commit checks including commit message validation on PRs
+- Ensures code quality before merging
+
+### Commit Message Convention
+
+This project follows [Conventional Commits](https://www.conventionalcommits.org/) for commit messages:
+
+**Format:**
+
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+**Types:**
+
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation changes
+- `style`: Code style changes (formatting)
+- `refactor`: Code refactoring
+- `perf`: Performance improvements
+- `test`: Test changes
+- `build`: Build system changes
+- `ci`: CI/CD changes
+- `chore`: Other changes
+
+**Examples:**
+
+```bash
+feat(handlers): add custom status code support
+fix(jwt): handle missing authorization header
+docs: update README with TLS examples
+test(services): add body parser edge cases
+```
+
+**Validation:**
+
+```bash
+# Validate a commit message
+echo "feat(api): add new endpoint" | npx @commitlint/cli --config .commitlintrc.yml
+
+# Validate the last commit
+git log -1 --pretty=%B | npx @commitlint/cli --config .commitlintrc.yml
+
+# Show usage examples
+task commit-lint
+
+# Commit messages are auto-validated by pre-commit hook
+git commit -m "feat(api): add new endpoint"
+```
+
+See [COMMIT_CONVENTION.md](COMMIT_CONVENTION.md) for detailed guidelines.
+
+### Dev Container (Codespaces / VS Code)
+
+This project includes a complete dev container configuration with all tools pre-installed:
+
+**Open in GitHub Codespaces:**
+
+- Click "Code" → "Create codespace on main"
+- Everything is pre-configured and ready to use
+
+**Open in VS Code Dev Container:**
+
+```bash
+# Prerequisites: Docker and VS Code with "Dev Containers" extension
+# Open in VS Code, then:
+# F1 → "Dev Containers: Reopen in Container"
+```
+
+**Pre-installed tools:**
+
+- Go 1.25, Node.js LTS, Python 3.11
+- Task runner, pre-commit, commitlint
+- golangci-lint, hadolint, yamllint, markdownlint
+- All VS Code extensions (Go, Docker, Kubernetes, etc.)
+- Pre-commit hooks automatically configured
+
+See [.devcontainer/README.md](.devcontainer/README.md) for details.
+
+### Using Task (Task Runner)
+
+This project uses [Task](https://taskfile.dev) as its command runner for better developer experience.
+
+**Installation:**
+
+```bash
+# macOS
+brew install go-task
+
+# Linux (installs to ~/.local/bin)
+sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin
+
+# Or using go
+go install github.com/go-task/task/v3/cmd/task@latest
+
+# Windows (using Chocolatey)
+choco install go-task
+```
+
+**Quick commands:**
+
+```bash
+task                # Show available tasks (runs --list)
+task --list         # List all tasks with descriptions
+task help           # Show detailed help
+
+# Development workflow
+task run            # Run the server
+task dev            # Run with hot reload
+task test           # Run tests
+task lint           # Run linter
+task pre-commit-run # Run all pre-commit checks
+
+# Build
+task build          # Build binary
+
+# Development
+task test-coverage     # Run tests with coverage
+task test-race         # Run with race detection
+task coverage-view     # Generate and view coverage HTML
+task lint              # Run linter
+task lint-fix          # Auto-fix linting issues
+task fmt               # Format code
+task pre-commit-run    # Run all pre-commit checks
+task pre-commit-install # Install pre-commit hooks
+
+# Docker
+task docker-build      # Build Docker image
+task docker-run        # Run Docker container
+task docker-all        # Build and run
+
+# More
+task ci             # Run all CI checks
+task pre-commit     # Run pre-commit checks
+task version        # Show current version
+```
+
+> **Note:** The Makefile is still present for backward compatibility, but Task is recommended for new development.
 
 ## Configuration
 
 Environment variables:
 
 ### General Configuration
+
 - `PORT` - HTTP server port (default: 8080)
 - `FIBER_PREFORK` - Enable prefork mode for multi-core scalability (default: false) - Linux only
 - `ECHO_PAGE_TITLE` - Custom page title for HTML interface
@@ -89,12 +281,14 @@ Environment variables:
 - `LOG_HEALTHCHECKS` - Enable logging of healthcheck requests (default: false)
 
 ### TLS/HTTPS Configuration
+
 - `TLS_ENABLED` - Enable TLS/HTTPS support (default: false)
 - `TLS_PORT` - HTTPS server port (default: 8443)
 - `TLS_CERT_FILE` - Path to TLS certificate file (default: /certs/tls.crt)
 - `TLS_KEY_FILE` - Path to TLS private key file (default: /certs/tls.key)
 
 When `TLS_ENABLED=true`:
+
 - If certificate files exist at the specified paths, they will be loaded
 - If certificate files don't exist, a self-signed certificate is automatically generated in memory
 - Both HTTP (PORT) and HTTPS (TLS_PORT) servers run simultaneously
@@ -139,6 +333,7 @@ Build your request using the visual interface - simply enter a path like `/api/t
 The server automatically compresses responses when the client sends an `Accept-Encoding` header with supported compression methods (gzip, deflate, or brotli).
 
 **Example:**
+
 ```bash
 # With compression
 curl -H "Accept-Encoding: gzip" http://localhost:8080/
@@ -148,6 +343,7 @@ curl http://localhost:8080/
 ```
 
 Compression is automatically skipped for:
+
 - Healthcheck endpoints (`/healthz/live`, `/healthz/ready`)
 - Responses smaller than 200 bytes
 - Already encoded responses
@@ -157,6 +353,7 @@ Compression is automatically skipped for:
 The echo server automatically captures and parses request bodies for POST, PUT, PATCH, and DELETE methods:
 
 **Supported Content Types:**
+
 - `application/json` - Parsed and displayed as JSON
 - `application/xml` / `text/xml` - Parsed and displayed as XML (or raw text if parsing fails)
 - `application/x-www-form-urlencoded` - Parsed as form data
@@ -189,6 +386,7 @@ curl -X POST http://localhost:8080/api/upload \
 ```
 
 **Body Safety Features:**
+
 - Maximum body size limit (default 10MB, configurable via `MAX_BODY_SIZE`)
 - Binary data detection and automatic base64 encoding
 - Truncation indicator when body exceeds size limit
@@ -206,6 +404,7 @@ The `/monitor` endpoint provides a real-time dashboard showing server metrics:
 Access the dashboard at: `http://localhost:8080/monitor`
 
 You can also retrieve metrics as JSON:
+
 ```bash
 curl -H "Accept: application/json" http://localhost:8080/monitor
 ```
@@ -274,6 +473,7 @@ kubectl apply -f deploy/kubernetes/deployment.yaml
 cert-manager automatically provisions and renews TLS certificates from Let's Encrypt or other ACME providers.
 
 **Prerequisites:**
+
 - cert-manager installed in your cluster ([installation guide](https://cert-manager.io/docs/installation/))
 - ClusterIssuer or Issuer configured
 
@@ -293,12 +493,14 @@ kubectl apply -f deploy/kubernetes/ingress.yaml
 ```
 
 The Certificate resource (`deploy/kubernetes/certificate.yaml`) specifies:
+
 - Certificate duration and renewal periods
 - DNS names the certificate is valid for
 - Reference to the Issuer/ClusterIssuer
 - Secret name where the certificate will be stored
 
 cert-manager will automatically:
+
 - Request a certificate from the configured issuer
 - Store the certificate in the specified Kubernetes secret
 - Renew the certificate before it expires
@@ -308,6 +510,7 @@ cert-manager will automatically:
 OpenShift provides three TLS termination options:
 
 **1. Edge Termination (Recommended)**
+
 - TLS is terminated at the router
 - Traffic to the service is HTTP
 - No application-side TLS configuration needed
@@ -318,6 +521,7 @@ kubectl apply -f deploy/openshift/route.yaml
 ```
 
 **2. Passthrough Termination**
+
 - TLS traffic passes through the router to the service
 - Application handles TLS termination (requires `TLS_ENABLED=true`)
 - End-to-end encryption
@@ -330,6 +534,7 @@ tls:
 ```
 
 **3. Re-encrypt Termination**
+
 - TLS is terminated at the router and re-encrypted to the service
 - Requires `TLS_ENABLED=true` in the application
 - Provides end-to-end encryption with router-based certificate management
@@ -344,6 +549,7 @@ tls:
 ### Self-Signed Certificate Details
 
 When TLS is enabled without certificate files, the server automatically generates a self-signed certificate with:
+
 - **Algorithm**: RSA 2048-bit
 - **Validity**: 365 days from generation
 - **Subject**: CN=<hostname>, O=Echo Server
@@ -376,22 +582,26 @@ When TLS is enabled without certificate files, the server automatically generate
 This echo server implements several performance optimizations based on the [Fiber "Faster Fiber" guide](https://docs.gofiber.io/guide/faster-fiber):
 
 ### 1. Fast JSON Encoding/Decoding
+
 - Uses **goccy/go-json** instead of Go's standard `encoding/json`
 - Significantly faster JSON marshaling/unmarshaling for API responses
 - Configured in the Fiber app config with `JSONEncoder` and `JSONDecoder`
 
 ### 2. Zero-Allocation String Conversions
+
 - Uses `gofiber/utils.UnsafeString()` for byte-to-string conversions
 - Reduces memory allocations when processing headers and query strings
 - Particularly effective in high-throughput scenarios
 
 ### 3. Optional Prefork Mode
+
 - Enable with `FIBER_PREFORK=true` environment variable
 - Spawns multiple processes to utilize all CPU cores
 - Best for production deployments on Linux systems
 - Not recommended for Windows environments
 
-### Example with Prefork:
+### Example with Prefork
+
 ```bash
 # Enable prefork for multi-core performance
 FIBER_PREFORK=true ./echo-server
@@ -401,6 +611,7 @@ docker run -e FIBER_PREFORK=true -p 8080:8080 echo-server:latest
 ```
 
 ### Performance Benefits
+
 - **Faster JSON operations**: 2-3x improvement in JSON encoding/decoding
 - **Reduced allocations**: Lower memory footprint and GC pressure
 - **Better scalability**: Prefork mode enables true multi-core utilization
@@ -422,6 +633,7 @@ docker run -e TLS_ENABLED=true -p 8080:8080 -p 8443:8443 echo-server:latest
 ```
 
 When TLS is enabled:
+
 - **HTTP server** continues running on port 8080 (or custom `PORT`)
 - **HTTPS server** runs on port 8443 (or custom `TLS_PORT`)
 - Both servers share the same routes, middleware, and handlers
@@ -438,6 +650,7 @@ TLS_ENABLED=true ./echo-server
 ```
 
 **Self-signed certificate properties:**
+
 - 2048-bit RSA key
 - Valid for 365 days
 - Includes hostname and localhost in DNS names
@@ -528,17 +741,20 @@ openssl s_client -connect localhost:8443 -showcerts
 When TLS is enabled, the echo response includes TLS information:
 
 **Server TLS Info** (`server.tls`):
+
 - Certificate subject and issuer
 - Certificate validity period (notBefore, notAfter)
 - Certificate serial number
 - DNS names in certificate
 
 **Request TLS Info** (`request.tls`):
+
 - Whether the specific request used TLS
 - TLS version (when available)
 - Cipher suite information (when available)
 
 **Example JSON response:**
+
 ```json
 {
   "request": {

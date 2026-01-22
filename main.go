@@ -259,7 +259,7 @@ func startDualStackServers(app *fiber.App, httpPort string) {
 	}
 
 	// Store certificate information in environment for handlers to access
-	storeCertificateInfo(cert)
+	storeCertificateInfo(&cert)
 
 	// Create TLS config
 	tlsConfig := &tls.Config{
@@ -275,8 +275,8 @@ func startDualStackServers(app *fiber.App, httpPort string) {
 	go func() {
 		defer wg.Done()
 		log.Printf("Echo Server starting HTTP server on port %s", httpPort)
-		if err := app.Listen(":" + httpPort); err != nil {
-			log.Printf("HTTP server error: %v", err)
+		if listenErr := app.Listen(":" + httpPort); listenErr != nil {
+			log.Printf("HTTP server error: %v", listenErr)
 		}
 	}()
 
@@ -286,14 +286,14 @@ func startDualStackServers(app *fiber.App, httpPort string) {
 		log.Printf("Echo Server starting HTTPS server on port %s", tlsPort)
 
 		// Use ListenTLSWithCertificate for custom TLS config
-		ln, err := tls.Listen("tcp", ":"+tlsPort, tlsConfig)
-		if err != nil {
-			log.Printf("Failed to create TLS listener: %v", err)
+		ln, listenErr := tls.Listen("tcp", ":"+tlsPort, tlsConfig)
+		if listenErr != nil {
+			log.Printf("Failed to create TLS listener: %v", listenErr)
 			return
 		}
 
-		if err := app.Listener(ln); err != nil {
-			log.Printf("HTTPS server error: %v", err)
+		if listenerErr := app.Listener(ln); listenerErr != nil {
+			log.Printf("HTTPS server error: %v", listenerErr)
 		}
 	}()
 
@@ -306,7 +306,7 @@ func startDualStackServers(app *fiber.App, httpPort string) {
 // of using environment variables for configuration and metadata (see K8S_* vars).
 // Environment variables are used here for simplicity and consistency with the
 // existing architecture, where handlers access server metadata via os.Getenv().
-func storeCertificateInfo(cert tls.Certificate) {
+func storeCertificateInfo(cert *tls.Certificate) {
 	x509Cert, err := services.ParseCertificate(cert)
 	if err != nil {
 		log.Printf("Warning: Failed to parse certificate: %v", err)
@@ -314,24 +314,24 @@ func storeCertificateInfo(cert tls.Certificate) {
 	}
 
 	// Store certificate info in environment with _ prefix to indicate internal use
-	if err := os.Setenv("_TLS_CERT_SUBJECT", x509Cert.Subject.String()); err != nil {
-		log.Printf("Warning: Failed to set _TLS_CERT_SUBJECT: %v", err)
+	if setErr := os.Setenv("_TLS_CERT_SUBJECT", x509Cert.Subject.String()); setErr != nil {
+		log.Printf("Warning: Failed to set _TLS_CERT_SUBJECT: %v", setErr)
 	}
-	if err := os.Setenv("_TLS_CERT_ISSUER", x509Cert.Issuer.String()); err != nil {
-		log.Printf("Warning: Failed to set _TLS_CERT_ISSUER: %v", err)
+	if setErr := os.Setenv("_TLS_CERT_ISSUER", x509Cert.Issuer.String()); setErr != nil {
+		log.Printf("Warning: Failed to set _TLS_CERT_ISSUER: %v", setErr)
 	}
-	if err := os.Setenv("_TLS_CERT_NOT_BEFORE", x509Cert.NotBefore.Format(time.RFC3339)); err != nil {
-		log.Printf("Warning: Failed to set _TLS_CERT_NOT_BEFORE: %v", err)
+	if setErr := os.Setenv("_TLS_CERT_NOT_BEFORE", x509Cert.NotBefore.Format(time.RFC3339)); setErr != nil {
+		log.Printf("Warning: Failed to set _TLS_CERT_NOT_BEFORE: %v", setErr)
 	}
-	if err := os.Setenv("_TLS_CERT_NOT_AFTER", x509Cert.NotAfter.Format(time.RFC3339)); err != nil {
-		log.Printf("Warning: Failed to set _TLS_CERT_NOT_AFTER: %v", err)
+	if setErr := os.Setenv("_TLS_CERT_NOT_AFTER", x509Cert.NotAfter.Format(time.RFC3339)); setErr != nil {
+		log.Printf("Warning: Failed to set _TLS_CERT_NOT_AFTER: %v", setErr)
 	}
-	if err := os.Setenv("_TLS_CERT_SERIAL", x509Cert.SerialNumber.String()); err != nil {
-		log.Printf("Warning: Failed to set _TLS_CERT_SERIAL: %v", err)
+	if setErr := os.Setenv("_TLS_CERT_SERIAL", x509Cert.SerialNumber.String()); setErr != nil {
+		log.Printf("Warning: Failed to set _TLS_CERT_SERIAL: %v", setErr)
 	}
 	if len(x509Cert.DNSNames) > 0 {
-		if err := os.Setenv("_TLS_CERT_DNS_NAMES", strings.Join(x509Cert.DNSNames, ",")); err != nil {
-			log.Printf("Warning: Failed to set _TLS_CERT_DNS_NAMES: %v", err)
+		if setErr := os.Setenv("_TLS_CERT_DNS_NAMES", strings.Join(x509Cert.DNSNames, ",")); setErr != nil {
+			log.Printf("Warning: Failed to set _TLS_CERT_DNS_NAMES: %v", setErr)
 		}
 	}
 }

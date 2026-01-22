@@ -29,26 +29,28 @@ func NewTLSService() *TLSService {
 func (t *TLSService) GetOrGenerateCertificate(certFile, keyFile string) (tls.Certificate, error) {
 	// Try to load from files first
 	if _, err := os.Stat(certFile); err == nil {
-		if _, err := os.Stat(keyFile); err == nil {
+		if _, errKey := os.Stat(keyFile); errKey == nil {
 			log.Printf("Loading TLS certificates from files: cert=%s, key=%s", certFile, keyFile)
 
-			cert, err := tls.LoadX509KeyPair(certFile, keyFile)
-			if err != nil {
-				return tls.Certificate{}, fmt.Errorf("failed to load certificate files: %w", err)
+			cert, loadErr := tls.LoadX509KeyPair(certFile, keyFile)
+			if loadErr != nil {
+				return tls.Certificate{}, fmt.Errorf("failed to load certificate files: %w", loadErr)
 			}
 
 			// Store PEM data for logging
+			// #nosec G304 -- Certificate file path is from configuration, not user input
 			t.certPEM, err = os.ReadFile(certFile)
 			if err != nil {
 				log.Printf("Warning: Failed to read certificate file for logging: %v", err)
 			}
+			// #nosec G304 -- Key file path is from configuration, not user input
 			t.keyPEM, err = os.ReadFile(keyFile)
 			if err != nil {
 				log.Printf("Warning: Failed to read key file for logging: %v", err)
 			}
 
 			// Log certificate information
-			t.logCertificateInfo(cert)
+			t.logCertificateInfo(&cert)
 
 			return cert, nil
 		}
@@ -124,13 +126,13 @@ func (t *TLSService) generateSelfSignedCertificate() (tls.Certificate, error) {
 		hostname, notBefore.Format(time.RFC3339), notAfter.Format(time.RFC3339))
 
 	// Log certificate information
-	t.logCertificateInfo(cert)
+	t.logCertificateInfo(&cert)
 
 	return cert, nil
 }
 
 // logCertificateInfo logs details about the certificate
-func (t *TLSService) logCertificateInfo(cert tls.Certificate) {
+func (t *TLSService) logCertificateInfo(cert *tls.Certificate) {
 	if len(cert.Certificate) == 0 {
 		return
 	}
@@ -153,7 +155,7 @@ func (t *TLSService) logCertificateInfo(cert tls.Certificate) {
 }
 
 // ParseCertificate parses the X.509 certificate from the TLS certificate
-func ParseCertificate(cert tls.Certificate) (*x509.Certificate, error) {
+func ParseCertificate(cert *tls.Certificate) (*x509.Certificate, error) {
 	if len(cert.Certificate) == 0 {
 		return nil, fmt.Errorf("no certificate found")
 	}

@@ -11,6 +11,8 @@ echo-server
 
 # Output of the go coverage tool
 *.out
+coverage.html
+coverage.out
 
 # Dependency directories
 vendor/
@@ -18,13 +20,52 @@ vendor/
 # Go workspace file
 go.work
 
-# IDE files
-.vscode/
+# IDE files - Keep shared workspace settings, ignore personal files
+# .vscode/ - Keep shared settings (settings.json, launch.json, tasks.json, extensions.json)
+.vscode/*.log
+.vscode/.ropeproject/
+.vscode/ipch/
+.vscode/browse.vc.db
+.vscode/browse.vc.db-*
+
+# JetBrains IDEs
 .idea/
+
+# Editor swap/backup files
 *.swp
 *.swo
 *~
+*.bak
 
 # OS files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Air - Live reload for Go
+tmp/
+build-errors.log
+
+# Docker volumes
+certs/
+
+# Pre-commit
+.pre-commit-config.yaml.bak
+
+# Debug files
+__debug_bin*
+debug.test
+
+# Profiling
+*.pprof
+*.prof
+cpu.out
+mem.out
+block.out
+mutex.out
+trace.out

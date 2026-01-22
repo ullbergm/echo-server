@@ -5,20 +5,22 @@ on:
     branches:
       - main
     paths:
-      - '**.go'
-      - 'go.mod'
-      - 'go.sum'
-      - 'Dockerfile'
-      - '.github/workflows/test.yml'
+      - "**.go"
+      - "go.mod"
+      - "go.sum"
+      - "Dockerfile"
+      - "Taskfile.yml"
+      - ".github/workflows/test.yml"
   pull_request:
     branches:
       - main
     paths:
-      - '**.go'
-      - 'go.mod'
-      - 'go.sum'
-      - 'Dockerfile'
-      - '.github/workflows/test.yml'
+      - "**.go"
+      - "go.mod"
+      - "go.sum"
+      - "Dockerfile"
+      - "Taskfile.yml"
+      - ".github/workflows/test.yml"
   merge_group:
 
 concurrency:
@@ -26,25 +28,75 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GO_VERSION: '1.25.6'
+  GO_VERSION: "1.25.6"
 
 jobs:
   test:
     name: Run Tests
     runs-on: ubuntu-latest
-    
+    permissions:
+      contents: read
+      pull-requests: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
-      
+
       - name: Set up Go
         uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6
         with:
-          go-version: '${{ env.GO_VERSION }}'
+          go-version: "${{ env.GO_VERSION }}"
           cache: true
-      
+
+      - name: Install Task
+        uses: arduino/setup-task@b91d5d2c96a56797b48ac1e0e89220bf64044611 # v2
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Run tests
-        run: go test -v -race -coverprofile=coverage.out ./...
-      
-      - name: Run build
-        run: go build -v .
+        run: task test
+
+      - name: Run tests with race detection
+        run: task test-race
+
+      - name: Generate coverage
+        run: task coverage
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v6
+        with:
+          name: coverage-report
+          path: |
+            coverage.out
+            coverage.html
+          retention-days: 30
+
+      - name: Generate coverage summary
+        id: coverage
+        run: |
+          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}')
+          echo "total=$COVERAGE" >> $GITHUB_OUTPUT
+
+          # Generate detailed coverage report
+          echo "## 📊 Code Coverage Report" > coverage-summary.md
+          echo "" >> coverage-summary.md
+          echo "**Total Coverage:** \`$COVERAGE\`" >> coverage-summary.md
+          echo "" >> coverage-summary.md
+          echo "### Coverage by Package" >> coverage-summary.md
+          echo "" >> coverage-summary.md
+          echo "\`\`\`" >> coverage-summary.md
+          go tool cover -func=coverage.out >> coverage-summary.md
+          echo "\`\`\`" >> coverage-summary.md
+          echo "" >> coverage-summary.md
+          echo "📁 [Download full coverage report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> coverage-summary.md
+
+      - name: Add coverage PR comment
+        uses: marocchino/sticky-pull-request-comment@331f8f5b4215f0445d3c07b4967662a32a2d3e31 # v2
+        if: github.event_name == 'pull_request'
+        with:
+          header: coverage
+          path: coverage-summary.md
+
+      - name: Build binary
+        run: task build
