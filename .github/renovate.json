@@ -9,6 +9,12 @@
       "matchDatasources": [
         "go"
       ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "pin",
+        "digest"
+      ],
       "groupName": "Go dependencies",
       "labels": [
         "type/dependencies",
@@ -19,6 +25,12 @@
       "matchDatasources": [
         "docker"
       ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "pin",
+        "digest"
+      ],
       "groupName": "Docker dependencies",
       "labels": [
         "type/dependencies",
@@ -28,6 +40,12 @@
     {
       "matchManagers": [
         "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "pin",
+        "digest"
       ],
       "groupName": "GitHub Actions",
       "labels": [
