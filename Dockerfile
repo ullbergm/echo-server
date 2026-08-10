@@ -23,7 +23,7 @@ RUN VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "dev") && \
     CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w -X main.Version=$VERSION" -o echo-server .
 
 ## Stage 2: Create the runtime image
-FROM alpine:3.23
+FROM alpine:3.24
 
 # Install ca-certificates for HTTPS
 RUN apk --no-cache add ca-certificates
