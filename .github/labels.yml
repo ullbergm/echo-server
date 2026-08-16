@@ -23,6 +23,10 @@
   color: "cfd3d7"
   description: "CI/CD pipeline changes"
 
+- name: "type/build"
+  color: "cfd3d7"
+  description: "Build system changes (Dockerfile, Taskfile)"
+
 - name: "type/dependencies"
   color: "0366d6"
   description: "Dependency updates"
