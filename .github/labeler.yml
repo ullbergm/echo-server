@@ -48,3 +48,7 @@ area/kubernetes:
 area/github:
   - changed-files:
       - any-glob-to-any-file: [".github/workflows/**/*", ".github/actions/**/*"]
+
+area/dependencies:
+  - changed-files:
+      - any-glob-to-any-file: ["go.mod", "go.sum"]

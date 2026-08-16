@@ -41,7 +41,7 @@ COPY --from=build --chown=app:app /app/templates ./templates
 COPY --from=build --chown=app:app /app/public ./public
 
 # Use non-root user
-USER app
+USER 1001:1001
 
 # Expose ports
 EXPOSE 8080
