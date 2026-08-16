@@ -23,6 +23,10 @@
   color: "cfd3d7"
   description: "CI/CD pipeline changes"
 
+- name: "type/build"
+  color: "cfd3d7"
+  description: "Build system changes (Dockerfile, Taskfile)"
+
 - name: "type/dependencies"
   color: "0366d6"
   description: "Dependency updates"
@@ -55,6 +59,10 @@
 - name: "area/github"
   color: "cfd3d7"
   description: "GitHub-related changes"
+
+- name: "area/dependencies"
+  color: "c2e0c6"
+  description: "Changes to Go module dependencies"
 
 # Size labels
 - name: "size/XS"

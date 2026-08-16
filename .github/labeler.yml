@@ -8,7 +8,12 @@ type/documentation:
 
 type/ci:
   - changed-files:
-      - any-glob-to-any-file: [".github/workflows/**/*", ".github/actions/**/*"]
+      - any-glob-to-any-file: [".github/**/*"]
+
+type/build:
+  - changed-files:
+      - any-glob-to-any-file:
+          ["Dockerfile", "docker-compose.yml", ".dockerignore", "Taskfile.yml"]
 
 type/dependencies:
   - changed-files:
@@ -34,7 +39,7 @@ area/templates:
 area/docker:
   - changed-files:
       - any-glob-to-any-file:
-          ["Dockerfile", "docker-compose.yml", ".dockerignore"]
+          ["Dockerfile", "docker-compose.yml", ".dockerignore", "Taskfile.yml"]
 
 area/kubernetes:
   - changed-files:
@@ -48,3 +53,7 @@ area/kubernetes:
 area/github:
   - changed-files:
       - any-glob-to-any-file: [".github/workflows/**/*", ".github/actions/**/*"]
+
+area/dependencies:
+  - changed-files:
+      - any-glob-to-any-file: ["go.mod", "go.sum"]
