@@ -1,6 +1,6 @@
 module github.com/ullbergm/echo-server
 
-go 1.26.0
+go 1.26.6
 
 require (
 	github.com/goccy/go-json v0.10.6
