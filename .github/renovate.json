@@ -41,12 +41,6 @@
       "matchManagers": [
         "github-actions"
       ],
-      "matchUpdateTypes": [
-        "minor",
-        "patch",
-        "pin",
-        "digest"
-      ],
       "groupName": "GitHub Actions",
       "labels": [
         "type/dependencies",
