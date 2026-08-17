@@ -2,7 +2,7 @@
 	"name": "Echo Server Dev Container",
 	"image": "mcr.microsoft.com/devcontainers/go:2-bookworm",
 	"features": {
-		"ghcr.io/devcontainers/features/docker-in-docker:2": {},
+		"ghcr.io/devcontainers/features/docker-in-docker:4": {},
 		"ghcr.io/devcontainers/features/git:1": {},
 		"ghcr.io/devcontainers/features/github-cli:1": {},
 		"ghcr.io/devcontainers/features/node:1": {
